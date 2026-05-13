@@ -11,14 +11,14 @@ package WG58.pengguna;
 
 public abstract class Pengguna {
 
-    private String idPengguna;
-    private String peran;
+    protected String idPengguna; //// Menggunakan 'protected' agar variabel ini bisa diakses langsung
+    protected String peran;      // oleh class turunannya (Pelanggan, Tenant) tapi tetap tersembunyi dari class luar.
 
     public Pengguna(String idPengguna, String peran) {
         this.idPengguna = idPengguna;
         this.peran = peran;
     }
-    
+
 
     public abstract boolean aksesSistem();
 }
