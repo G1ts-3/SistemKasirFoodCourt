@@ -30,7 +30,7 @@ public class KonektorMySQL {
     public boolean hubungkan() {
         try {
             // Ini untuk memanggil Driver JDBC MySQL; pastikan Connector/J sudah ada di classpath.
-            Class.forName(" ");
+            Class.forName("com.mysql.cj.jdbc.Driver");
             String url = "jdbc:mysql://" + host + ":" + port + "/" + namaDB
                        + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Jakarta";
             connection = DriverManager.getConnection(url, "root", "");

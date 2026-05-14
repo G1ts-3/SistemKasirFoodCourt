@@ -10,7 +10,7 @@
         <maven.compiler.release>24</maven.compiler.release>
         <exec.mainClass>kelompok.wg58.WG58.app.Main</exec.mainClass>
     </properties>
-    <name>SistemKasirFoodCourtWG58</name>
+    <name>SistemKasirFoodCourtWG58-Test</name>
 
     <repositories>
         <repository>
