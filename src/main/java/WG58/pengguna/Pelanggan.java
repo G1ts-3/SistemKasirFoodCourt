@@ -18,16 +18,20 @@ public class Pelanggan extends Pengguna {
         System.out.println("Masuk sebagai pelanggan.");
     }
 
-    public void tampilkanDaftarMenu(ArrayList<Menu> daftarMenu) {
-        System.out.println("\n+------+----------+-----------------+----------+-------+");
-        System.out.println("| No   | ID       | Nama Menu       | Jenis    | Kupon |");
-        System.out.println("+------+----------+-----------------+----------+-------+");
+    public void tampilkanDaftarMenu(ArrayList<Menu> daftarMenu, ArrayList<StokMenu> daftarStokMenu) {
+        System.out.println("\n+------+----------+-----------------+----------+-------+----------------+");
+        System.out.println("| No   | ID       | Nama Menu       | Jenis    | Kupon | Status         |");
+        System.out.println("+------+----------+-----------------+----------+-------+----------------+");
 
         for (int i = 0; i < daftarMenu.size(); i++) {
-            daftarMenu.get(i).tampilkanBarisTabel(i + 1);
+            String status = daftarStokMenu.get(i).getJumlahStok() <= 0 
+                ? "Tidak Tersedia" 
+                : "Tersedia";
+
+            daftarMenu.get(i).tampilkanBarisTabel(i + 1, status);
         }
 
-        System.out.println("+------+----------+-----------------+----------+-------+");
+        System.out.println("+------+----------+-----------------+----------+-------+----------------+");
         System.out.println("0. Selesai pilih");
     }
 
@@ -38,7 +42,7 @@ public class Pelanggan extends Pengguna {
         int pilih = -1;
 
         while (pilih != 0) {
-            tampilkanDaftarMenu(daftarMenu);
+            tampilkanDaftarMenu(daftarMenu, daftarStokMenu);;
 
             System.out.print("Pilih menu: ");
             pilih = input.nextInt();

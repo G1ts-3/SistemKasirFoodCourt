@@ -33,8 +33,13 @@ public abstract class Menu {
 
     public abstract String getJenis();
     
-    public void tampilkanBarisTabel(int nomor) {
-        System.out.printf("| %-4d | %-8s | %-15s | %-8s | %-5d |\n",
-                nomor, idMenu, namaMenu, getJenis(), hargaKupon);
+    public void tampilkanBarisTabel(int nomor, String status) {
+        System.out.printf("| %-4d | %-8s | %-15s | %-8s | %-5d | %-14s |\n",
+                nomor,
+                idMenu,
+                namaMenu,
+                getJenis(),
+                hargaKupon,
+                status);
     }
 }
