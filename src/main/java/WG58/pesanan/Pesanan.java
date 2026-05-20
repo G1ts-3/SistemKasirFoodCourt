@@ -10,9 +10,15 @@ public class Pesanan {
     private ArrayList<ItemPesanan> daftarItem;
     private Pembayaran pembayaran;
     private Rating rating;
+    private String namaTenant;
 
     public Pesanan(String noMeja) {
+        this(noMeja, "-");
+    }
+
+    public Pesanan(String noMeja, String namaTenant) {
         this.noMeja = noMeja;
+        this.namaTenant = namaTenant;
         this.statusPesanan = "Pesanan Diterima";
         this.daftarItem = new ArrayList<ItemPesanan>();
         this.pembayaran = null;
@@ -48,6 +54,7 @@ public class Pesanan {
         }
 
         System.out.println("+-----------------+----------+--------+--------+----------------------+");
+        System.out.println("Tenant       : " + namaTenant);
         System.out.println("Meja         : " + noMeja);
         System.out.println("Status       : " + statusPesanan);
         System.out.println("Total Kupon  : " + hitungTotalKupon());
@@ -89,5 +96,9 @@ public class Pesanan {
 
     public Rating getRating() {
         return rating;
+    }
+
+    public String getNamaTenant() {
+        return namaTenant;
     }
 }

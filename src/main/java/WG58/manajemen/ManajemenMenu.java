@@ -1,7 +1,12 @@
-package WG58.menu;
+package WG58.manajemen;
 
 import java.util.ArrayList;
 import java.util.Scanner;
+
+import WG58.menu.Makanan;
+import WG58.menu.Menu;
+import WG58.menu.Minuman;
+import WG58.menu.StokMenu;
 
 public class ManajemenMenu {
     public void tampilkanMenuDenganStok(ArrayList<StokMenu> daftarStokMenu) {

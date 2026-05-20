@@ -5,6 +5,7 @@ import WG58.menu.StokMenu;
 import WG58.pesanan.Pesanan;
 import WG58.pesanan.Rating;
 import WG58.pembayaran.PembayaranQRIS;
+import WG58.pengguna.Tenant;
 
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -24,9 +25,9 @@ public class Pelanggan extends Pengguna {
         System.out.println("+------+----------+-----------------+----------+-------+----------------+");
 
         for (int i = 0; i < daftarMenu.size(); i++) {
-            String status = daftarStokMenu.get(i).getJumlahStok() <= 0 
-                ? "Tidak Tersedia" 
-                : "Tersedia";
+            String status = daftarStokMenu.get(i).getJumlahStok() <= 0
+                    ? "Tidak Tersedia"
+                    : "Tersedia";
 
             daftarMenu.get(i).tampilkanBarisTabel(i + 1, status);
         }
@@ -35,34 +36,38 @@ public class Pelanggan extends Pengguna {
         System.out.println("0. Selesai pilih");
     }
 
-    public void buatPesanan(Scanner input,ArrayList<Menu> daftarMenu,ArrayList<StokMenu> daftarStokMenu,
-            ArrayList<Pesanan> daftarPesanan,String noMeja) {
-        Pesanan pesanan = new Pesanan(noMeja);
+    // Method buatPesanan() untuk setiap Per Tenant.
+    public void buatPesanan(Scanner in, Tenant tenantDipilih, String noMeja) {
+        ArrayList<Menu> daftarMenu = tenantDipilih.getDaftarMenu();
+        ArrayList<StokMenu> daftarStokMenu = tenantDipilih.getDaftarStokMenu();
+        ArrayList<Pesanan> daftarPesanan = tenantDipilih.getDaftarPesanan();
+
+        Pesanan pesanan = new Pesanan(noMeja, tenantDipilih.getNamaTenant());
 
         int pilih = -1;
 
         while (pilih != 0) {
-            tampilkanDaftarMenu(daftarMenu, daftarStokMenu);;
+            tampilkanDaftarMenu(daftarMenu, daftarStokMenu);
 
             System.out.print("Pilih menu: ");
-            pilih = input.nextInt();
-            input.nextLine();
+            pilih = in.nextInt();
+            in.nextLine();
 
             if (pilih > 0 && pilih <= daftarMenu.size()) {
                 Menu menuDipilih = daftarMenu.get(pilih - 1);
 
                 System.out.print("Jumlah: ");
-                int jumlah = input.nextInt();
-                input.nextLine();
+                int jumlah = in.nextInt();
+                in.nextLine();
 
                 String catatan = "-";
 
                 if (menuDipilih.getJenis().equals("Makanan")) {
                     System.out.print("Catatan makanan: ");
-                    catatan = input.nextLine();
+                    catatan = in.nextLine();
                 } else if (menuDipilih.getJenis().equals("Minuman")) {
                     System.out.print("Dingin? y/n: ");
-                    String jawab = input.nextLine();
+                    String jawab = in.nextLine();
 
                     if (jawab.equalsIgnoreCase("y")) {
                         catatan = "Dingin";
@@ -70,7 +75,9 @@ public class Pelanggan extends Pengguna {
                         catatan = "Tidak dingin";
                     }
                 }
+
                 StokMenu stokMenu = daftarStokMenu.get(pilih - 1);
+
                 if (stokMenu.getJumlahStok() < jumlah) {
                     System.out.println("Stok tidak cukup.");
                 } else {
@@ -88,20 +95,20 @@ public class Pelanggan extends Pengguna {
             return;
         }
 
-        System.out.println("\n=== KONFIRMASI PESANAN ===");
+        System.out.println("\n===== KONFIRMASI PESANAN =====");
         pesanan.tampilkanPesananTabel();
 
         System.out.print("Bayar sekarang? y/n: ");
-        String konfirmasi = input.nextLine();
+        String konfirmasi = in.nextLine();
 
         if (konfirmasi.equalsIgnoreCase("y")) {
             PembayaranQRIS pembayaran = new PembayaranQRIS(pesanan.hitungTotalRupiah());
 
             pembayaran.tampilkanQRIS();
-
+    
             System.out.print("Masukkan nominal bayar: Rp");
-            int nominalBayar = input.nextInt();
-            input.nextLine();
+            int nominalBayar = in.nextInt();
+            in.nextLine();
 
             pembayaran.prosesPembayaran(nominalBayar);
 
@@ -110,13 +117,14 @@ public class Pelanggan extends Pengguna {
                 daftarPesanan.add(pesanan);
 
                 System.out.println("Pembayaran berhasil.");
-                System.out.println("Pesanan dikirim ke tenant.");
+                System.out.println("Pesanan dikirim ke Tenant.");
             } else {
                 System.out.println("Pembayaran gagal. Nominal tidak sesuai.");
             }
         } else {
             System.out.println("Pesanan dibatalkan.");
         }
+
     }
 
     public void cekPesanan(ArrayList<Pesanan> daftarPesanan, String noMeja) {
@@ -137,6 +145,7 @@ public class Pelanggan extends Pengguna {
             System.out.println("Belum ada pesanan untuk meja ini.");
         }
     }
+
     public void ambilPesanan(Scanner input, ArrayList<Pesanan> daftarPesanan, String noMeja) {
         ArrayList<Pesanan> daftarSiap = new ArrayList<Pesanan>();
 

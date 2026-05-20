@@ -2,6 +2,8 @@ package WG58.pengguna;
 
 import WG58.pesanan.Pesanan;
 import WG58.pesanan.Rating;
+import WG58.menu.Menu;
+import WG58.menu.StokMenu;
 
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -9,11 +11,19 @@ import java.util.Scanner;
 public class Tenant extends Pengguna {
     private String username;
     private String password;
+    private String namaTenant;
+    private ArrayList<Menu> daftarMenu;
+    private ArrayList<StokMenu> daftarStokMenu;
+    private ArrayList<Pesanan> daftarPesanan;
 
-    public Tenant(String idPengguna, String peran, String username, String password) {
+    public Tenant(String idPengguna, String peran, String namaTenant, String username, String password) {
         super(idPengguna, peran);
+        this.namaTenant = namaTenant;
         this.username = username;
         this.password = password;
+        this.daftarMenu = new ArrayList<Menu>();
+        this.daftarStokMenu = new ArrayList<StokMenu>();
+        this.daftarPesanan = new ArrayList<Pesanan>();
     }
 
     public void aksesSistem() {
@@ -180,4 +190,30 @@ public class Tenant extends Pengguna {
             System.out.println("Belum ada rating.");
         }
     }
+
+    public String getNamaTenant() {
+        return namaTenant;
+    }
+
+    public ArrayList<Menu> getDaftarMenu() {
+        return daftarMenu;
+    }
+
+    public ArrayList<StokMenu> getDaftarStokMenu() {
+        return daftarStokMenu;
+    }
+
+    public ArrayList<Pesanan> getDaftarPesanan() {
+        return daftarPesanan;
+    }
+
+    public void tambahMenu(Menu menu, int jumlahStok) {
+        daftarMenu.add(menu);
+        daftarStokMenu.add(new StokMenu(menu, jumlahStok));
+    }
+
+    public void tambahPesanan(Pesanan pesanan) {
+        daftarPesanan.add(pesanan);
+    }
+
 }
