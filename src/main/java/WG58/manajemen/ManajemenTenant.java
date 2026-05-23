@@ -5,16 +5,31 @@ import WG58.pengguna.Tenant;
 
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class ManajemenTenant {
     private ArrayList<Tenant> daftarTenant;
+    private Map<String, Tenant> tenantByUsername;
+    private Set<String> usernameTerdaftar;
 
     public ManajemenTenant() {
         daftarTenant = new ArrayList<Tenant>();
+        tenantByUsername = new HashMap<String, Tenant>();
+        usernameTerdaftar = new HashSet<String>();
     }
-
+    
     public void tambahTenant(Tenant tenant) {
+        if (usernameTerdaftar.contains(tenant.getUsername())) {
+            System.out.println("Username sudah terdaftar. Tenant tidak dapat ditambahkan.");
+            return;
+        }
+
         daftarTenant.add(tenant);
+        tenantByUsername.put(tenant.getUsername(), tenant);
+        usernameTerdaftar.add(tenant.getUsername());
     }
 
     public ArrayList<Tenant> getDaftarTenant() {
@@ -65,12 +80,10 @@ public class ManajemenTenant {
     }
 
     public Tenant loginTenant(String username, String password) {
-        for (int i = 0; i < daftarTenant.size(); i++) {
-            Tenant tenant = daftarTenant.get(i);
-            
-            if (tenant.login(username, password)) {
-                return tenant;
-            }
+        Tenant tenant = tenantByUsername.get(username);
+
+        if (tenant != null && tenant.login(username, password)) {
+            return tenant;
         }
 
         return null;

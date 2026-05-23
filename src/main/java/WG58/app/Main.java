@@ -147,10 +147,7 @@ public class Main {
                         } else if (pilihTenant == 4) {
                             tenantLogin.lihatRating(tenantLogin.getDaftarPesanan());
                         } else if (pilihTenant == 5) {
-                            manajemenMenu.tambahMenuBaru(
-                                    input,
-                                    tenantLogin.getDaftarMenu(),
-                                    tenantLogin.getDaftarStokMenu());
+                            manajemenMenu.tambahMenuBaru(input, tenantLogin);
                         } else if (pilihTenant == 6) {
                             manajemenMenu.ubahStokMenu(
                                     input,

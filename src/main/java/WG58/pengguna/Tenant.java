@@ -7,6 +7,11 @@ import WG58.menu.StokMenu;
 
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.TreeSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class Tenant extends Pengguna {
     private String username;
@@ -15,6 +20,8 @@ public class Tenant extends Pengguna {
     private ArrayList<Menu> daftarMenu;
     private ArrayList<StokMenu> daftarStokMenu;
     private ArrayList<Pesanan> daftarPesanan;
+    private Map<String, StokMenu> stokMenuById;
+    private Set<String> idMenuTerdaftar;
 
     public Tenant(String idPengguna, String peran, String namaTenant, String username, String password) {
         super(idPengguna, peran);
@@ -24,6 +31,8 @@ public class Tenant extends Pengguna {
         this.daftarMenu = new ArrayList<Menu>();
         this.daftarStokMenu = new ArrayList<StokMenu>();
         this.daftarPesanan = new ArrayList<Pesanan>();
+        this.stokMenuById = new HashMap<String, StokMenu>();
+        this.idMenuTerdaftar = new HashSet<String>();
     }
 
     public void aksesSistem() {
@@ -53,6 +62,7 @@ public class Tenant extends Pengguna {
     }
 
     public void lihatPesananMasuk(ArrayList<Pesanan> daftarPesanan) {
+        Set<String> mejaAktif = new TreeSet<String>();
         boolean ada = false;
 
         System.out.println("\n=== PESANAN AKTIF ===");
@@ -65,6 +75,7 @@ public class Tenant extends Pengguna {
 
             if (!pesanan.getStatusPesanan().equals("Selesai")) {
                 pesanan.tampilkanRingkasTabel(i + 1);
+                mejaAktif.add(pesanan.getNoMeja());
                 ada = true;
             }
         }
@@ -73,6 +84,9 @@ public class Tenant extends Pengguna {
 
         if (!ada) {
             System.out.println("Tidak ada pesanan aktif.");
+        }
+        if (!mejaAktif.isEmpty()) {
+            System.out.println("\nMeja dengan pesanan aktif: " + mejaAktif);
         }
     }
 
@@ -208,12 +222,30 @@ public class Tenant extends Pengguna {
     }
 
     public void tambahMenu(Menu menu, int jumlahStok) {
+        if (idMenuTerdaftar.contains(menu.getIdProduk())) {
+            System.out.println("ID menu sudah terdaftar di tenant ini.");
+            return;
+        }
+
+        StokMenu stokMenu = new StokMenu(menu, jumlahStok);
+
+
         daftarMenu.add(menu);
-        daftarStokMenu.add(new StokMenu(menu, jumlahStok));
+        daftarStokMenu.add(stokMenu);
+        stokMenuById.put(menu.getIdProduk(), stokMenu);
+        idMenuTerdaftar.add(menu.getIdProduk());
+    }
+
+    public StokMenu cariStokMenuById(String idMenu) {
+        return stokMenuById.get(idMenu);
     }
 
     public void tambahPesanan(Pesanan pesanan) {
         daftarPesanan.add(pesanan);
+    }
+
+    public String getUsername() {
+        return username;
     }
 
 }

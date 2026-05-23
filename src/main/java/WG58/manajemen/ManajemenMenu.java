@@ -7,6 +7,7 @@ import WG58.menu.Makanan;
 import WG58.menu.Menu;
 import WG58.menu.Minuman;
 import WG58.menu.StokMenu;
+import WG58.pengguna.Tenant;
 
 public class ManajemenMenu {
     public void tampilkanMenuDenganStok(ArrayList<StokMenu> daftarStokMenu) {
@@ -21,7 +22,7 @@ public class ManajemenMenu {
         System.out.println("+------+----------+-----------------+----------+-------+-------+");
     }
 
-    public void tambahMenuBaru(Scanner input, ArrayList<Menu> daftarMenu, ArrayList<StokMenu> daftarStokMenu) {
+    public void tambahMenuBaru(Scanner input, Tenant tenant) {
         System.out.println("\n=== TAMBAH MENU BARU ===");
         System.out.println("1. Makanan");
         System.out.println("2. Minuman");
@@ -55,8 +56,7 @@ public class ManajemenMenu {
             return;
         }
 
-        daftarMenu.add(menuBaru);
-        daftarStokMenu.add(new StokMenu(menuBaru, stok));
+        tenant.tambahMenu(menuBaru, stok);
 
         System.out.println("Menu baru berhasil ditambahkan.");
     }
