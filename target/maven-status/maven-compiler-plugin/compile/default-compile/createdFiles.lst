@@ -1,0 +1,17 @@
+WG58\menu\Minuman.class
+WG58\pesanan\Pesanan.class
+WG58\pesanan\ItemPesanan.class
+WG58\menu\Menu.class
+WG58\app\Main.class
+WG58\pengguna\Pengguna.class
+WG58\database\KonektorMySQL.class
+WG58\pembayaran\Pembayaran.class
+WG58\pembayaran\PembayaranQRIS.class
+WG58\pesanan\Rating.class
+WG58\pengguna\Tenant.class
+WG58\manajemen\ManajemenMenu.class
+WG58\menu\StokMenu.class
+WG58\pengguna\Meja.class
+WG58\manajemen\ManajemenTenant.class
+WG58\pengguna\Pelanggan.class
+WG58\menu\Makanan.class
