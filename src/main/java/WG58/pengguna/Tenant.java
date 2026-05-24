@@ -84,48 +84,81 @@ public class Tenant extends Pengguna {
     }
 
     public void lihatDetailPesanan(Scanner input, ArrayList<Pesanan> daftarPesanan) {
-        if (daftarPesanan.size() == 0) {
-            System.out.println("Belum ada pesanan.");
-            return;
+        ArrayList<Pesanan> daftarAktif = new ArrayList<Pesanan>();
+
+        System.out.println("\n=== PESANAN AKTIF ===");
+        System.out.println("+------+----------+--------------------+-------------+--------------+");
+        System.out.println("| No   | Meja     | Status             | Total Kupon | Total Rupiah  |");
+        System.out.println("+------+----------+--------------------+-------------+--------------+");
+
+        int nomorTampil = 1;
+
+        for (int i = 0; i < daftarPesanan.size(); i++) {
+            Pesanan pesanan = daftarPesanan.get(i);
+
+            if (!pesanan.getStatusPesanan().equals("Selesai")) {
+                pesanan.tampilkanRingkasTabel(nomorTampil);
+                daftarAktif.add(pesanan);
+                nomorTampil++;
+            }
         }
 
-        lihatPesananMasuk(daftarPesanan);
+        System.out.println("+------+----------+--------------------+-------------+--------------+");
+
+        if (daftarAktif.size() == 0) {
+            System.out.println("Tidak ada pesanan aktif.");
+            return;
+        }
 
         System.out.print("Pilih nomor pesanan: ");
         int nomor = input.nextInt();
         input.nextLine();
 
-        if (nomor < 1 || nomor > daftarPesanan.size()) {
+        if (nomor < 1 || nomor > daftarAktif.size()) {
             System.out.println("Nomor pesanan tidak valid.");
             return;
         }
 
-        daftarPesanan.get(nomor - 1).tampilkanPesananTabel();
+        daftarAktif.get(nomor - 1).tampilkanPesananTabel();
     }
 
     public void ubahStatusPesanan(Scanner input, ArrayList<Pesanan> daftarPesanan) {
-        if (daftarPesanan.size() == 0) {
-            System.out.println("Belum ada pesanan.");
-            return;
+        ArrayList<Pesanan> daftarAktif = new ArrayList<Pesanan>();
+
+        System.out.println("\n=== PESANAN AKTIF ===");
+        System.out.println("+------+----------+--------------------+-------------+--------------+");
+        System.out.println("| No   | Meja     | Status             | Total Kupon | Total Rupiah  |");
+        System.out.println("+------+----------+--------------------+-------------+--------------+");
+
+        int nomorTampil = 1;
+
+        for (int i = 0; i < daftarPesanan.size(); i++) {
+            Pesanan pesanan = daftarPesanan.get(i);
+
+            if (!pesanan.getStatusPesanan().equals("Selesai")) {
+                pesanan.tampilkanRingkasTabel(nomorTampil);
+                daftarAktif.add(pesanan);
+                nomorTampil++;
+            }
         }
 
-        lihatPesananMasuk(daftarPesanan);
+        System.out.println("+------+----------+--------------------+-------------+--------------+");
+
+        if (daftarAktif.size() == 0) {
+            System.out.println("Tidak ada pesanan aktif.");
+            return;
+        }
 
         System.out.print("Pilih nomor pesanan: ");
         int nomor = input.nextInt();
         input.nextLine();
 
-        if (nomor < 1 || nomor > daftarPesanan.size()) {
+        if (nomor < 1 || nomor > daftarAktif.size()) {
             System.out.println("Nomor pesanan tidak valid.");
             return;
         }
 
-        Pesanan pesanan = daftarPesanan.get(nomor - 1);
-
-        if (pesanan.getStatusPesanan().equals("Selesai")) {
-            System.out.println("Pesanan sudah selesai, tidak bisa diubah.");
-            return;
-        }
+        Pesanan pesanan = daftarAktif.get(nomor - 1);
 
         System.out.println("1. Diproses");
         System.out.println("2. Siap Diambil");
@@ -152,8 +185,11 @@ public class Tenant extends Pengguna {
             } else {
                 System.out.println("Status gagal diubah di database.");
             }
+        } else {
+            System.out.println("Pilihan status tidak valid.");
         }
     }
+
 
     public void lihatRiwayatPesanan(ArrayList<Pesanan> daftarPesanan) {
         boolean ada = false;
@@ -344,8 +380,9 @@ public class Tenant extends Pengguna {
                         rs.getString("id_tenant"),
                         getNamaTenant(),
                         rs.getString("status_pesanan"));
-
+                        
                 isiItemPesananDariDB(conn, pesanan);
+                isiRatingDariDB(conn, pesanan);
                 hasil.add(pesanan);
             }
 
@@ -411,6 +448,26 @@ public class Tenant extends Pengguna {
             System.out.println("[DB] Error update status pesanan: " + e.getMessage());
             return false;
         }
+    }
+
+    private void isiRatingDariDB(Connection conn, Pesanan pesanan) throws Exception {
+        String sql = "SELECT nilai, ulasan FROM rating WHERE id_pesanan = ?";
+
+        PreparedStatement pstmt = conn.prepareStatement(sql);
+        pstmt.setInt(1, pesanan.getIdPesanan());
+
+        ResultSet rs = pstmt.executeQuery();
+
+        if (rs.next()) {
+            Rating rating = new Rating(
+                    rs.getInt("nilai"),
+                    rs.getString("ulasan"));
+
+            pesanan.setRating(rating);
+        }
+
+        rs.close();
+        pstmt.close();
     }
 
 

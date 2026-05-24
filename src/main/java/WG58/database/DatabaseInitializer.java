@@ -316,21 +316,21 @@ public class DatabaseInitializer {
         pstmt.setString(1, "M001");
         pstmt.setString(2, "Nasi Kuning");
         pstmt.setString(3, "Makanan");
-        pstmt.setInt(4, 15000);
+        pstmt.setInt(4, 3);
         pstmt.setString(5, "T001");
         pstmt.addBatch();
         
         pstmt.setString(1, "M002");
         pstmt.setString(2, "Ayam Goreng");
         pstmt.setString(3, "Makanan");
-        pstmt.setInt(4, 20000);
+        pstmt.setInt(4, 4);
         pstmt.setString(5, "T001");
         pstmt.addBatch();
         
         pstmt.setString(1, "M003");
         pstmt.setString(2, "Teh Hangat");
         pstmt.setString(3, "Minuman");
-        pstmt.setInt(4, 5000);
+        pstmt.setInt(4, 1);
         pstmt.setString(5, "T001");
         pstmt.addBatch();
         
@@ -338,21 +338,21 @@ public class DatabaseInitializer {
         pstmt.setString(1, "M004");
         pstmt.setString(2, "Soto Ayam");
         pstmt.setString(3, "Makanan");
-        pstmt.setInt(4, 18000);
+        pstmt.setInt(4, 3);
         pstmt.setString(5, "T002");
         pstmt.addBatch();
         
         pstmt.setString(1, "M005");
         pstmt.setString(2, "Perkedel");
         pstmt.setString(3, "Makanan");
-        pstmt.setInt(4, 8000);
+        pstmt.setInt(4, 4);
         pstmt.setString(5, "T002");
         pstmt.addBatch();
         
         pstmt.setString(1, "M006");
         pstmt.setString(2, "Jus Jeruk");
         pstmt.setString(3, "Minuman");
-        pstmt.setInt(4, 8000);
+        pstmt.setInt(4, 1);
         pstmt.setString(5, "T002");
         pstmt.addBatch();
         
@@ -360,21 +360,21 @@ public class DatabaseInitializer {
         pstmt.setString(1, "M007");
         pstmt.setString(2, "Kopi Hitam");
         pstmt.setString(3, "Minuman");
-        pstmt.setInt(4, 6000);
+        pstmt.setInt(4, 3);
         pstmt.setString(5, "T003");
         pstmt.addBatch();
         
         pstmt.setString(1, "M008");
         pstmt.setString(2, "Cappuccino");
         pstmt.setString(3, "Minuman");
-        pstmt.setInt(4, 12000);
+        pstmt.setInt(4, 4);
         pstmt.setString(5, "T003");
         pstmt.addBatch();
         
         pstmt.setString(1, "M009");
         pstmt.setString(2, "Smoothie Mangga");
         pstmt.setString(3, "Minuman");
-        pstmt.setInt(4, 10000);
+        pstmt.setInt(4, 1);
         pstmt.setString(5, "T003");
         pstmt.addBatch();
         
