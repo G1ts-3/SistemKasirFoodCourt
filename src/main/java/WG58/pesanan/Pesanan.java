@@ -11,19 +11,28 @@ public class Pesanan {
     private Pembayaran pembayaran;
     private Rating rating;
     private String namaTenant;
+    private int idPesanan;
+    private String idTenant;
 
     public Pesanan(String noMeja) {
-        this(noMeja, "-");
+        this(0, noMeja, null, "-", "Pesanan Diterima");
     }
 
     public Pesanan(String noMeja, String namaTenant) {
+        this(0, noMeja, null, namaTenant, "Pesanan Diterima");
+    }
+
+    public Pesanan(int idPesanan, String noMeja, String idTenant, String namaTenant, String statusPesanan) {
+        this.idPesanan = idPesanan;
         this.noMeja = noMeja;
+        this.idTenant = idTenant;
         this.namaTenant = namaTenant;
-        this.statusPesanan = "Pesanan Diterima";
+        this.statusPesanan = statusPesanan;
         this.daftarItem = new ArrayList<ItemPesanan>();
         this.pembayaran = null;
         this.rating = null;
     }
+
 
     public void tambahItem(Menu menu, int jumlah, String catatan) {
         ItemPesanan item = new ItemPesanan(menu, jumlah, catatan);
@@ -70,6 +79,7 @@ public class Pesanan {
                 "Rp" + hitungTotalRupiah());
     }
 
+    
     public void ubahStatus(String statusBaru) {
         this.statusPesanan = statusBaru;
     }
@@ -101,4 +111,17 @@ public class Pesanan {
     public String getNamaTenant() {
         return namaTenant;
     }
+
+    public int getIdPesanan() {
+        return idPesanan;
+    }
+
+    public String getIdTenant() {
+        return idTenant;
+    }
+
+    public ArrayList<ItemPesanan> getDaftarItem() {
+        return daftarItem;
+    }
+
 }

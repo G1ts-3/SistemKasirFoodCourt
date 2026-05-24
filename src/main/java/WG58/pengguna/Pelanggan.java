@@ -2,9 +2,16 @@ package WG58.pengguna;
 
 import WG58.menu.Menu;
 import WG58.menu.StokMenu;
+import WG58.pesanan.ItemPesanan;
 import WG58.pesanan.Pesanan;
 import WG58.pesanan.Rating;
 import WG58.pembayaran.PembayaranQRIS;
+import WG58.database.KonektorMySQL;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -120,10 +127,15 @@ public class Pelanggan extends Pengguna {
 
             if (pembayaran.getStatusBayar()) {
                 pesanan.setPembayaran(pembayaran);
-                tenantDipilih.tambahPesanan(pesanan);
 
-                System.out.println("Pembayaran berhasil.");
-                System.out.println("Pesanan dikirim ke tenant.");
+                int idPesanan = simpanPesananKeDB(tenantDipilih.getIdPengguna(), pesanan);
+
+                if (idPesanan != -1) {
+                    System.out.println("Pembayaran berhasil.");
+                    System.out.println("Pesanan dikirim ke tenant.");
+                } else {
+                    System.out.println("Pesanan gagal disimpan ke database.");
+                }
             } else {
                 System.out.println("Pembayaran gagal. Nominal tidak sesuai.");
             }
@@ -194,10 +206,16 @@ public class Pelanggan extends Pengguna {
         }
 
         Pesanan pesananDipilih = daftarSiap.get(pilih - 1);
-        pesananDipilih.ubahStatus("Selesai");
+        boolean berhasil = updateStatusPesananKeDB(pesananDipilih.getIdPesanan(), "Selesai");
 
-        System.out.println("Pesanan berhasil diambil.");
-        System.out.println("Sekarang kamu bisa memberi rating.");
+        if (berhasil) {
+            pesananDipilih.ubahStatus("Selesai");
+            System.out.println("Pesanan berhasil diambil.");
+            System.out.println("Sekarang kamu bisa memberi rating.");
+        } else {
+            System.out.println("Status pesanan gagal diubah di database.");
+        }
+
     }
 
     public void beriRating(Scanner input, ArrayList<Pesanan> daftarPesanan, String noMeja) {
@@ -256,8 +274,162 @@ public class Pelanggan extends Pengguna {
         String ulasan = input.nextLine();
 
         Rating rating = new Rating(nilai, ulasan);
-        daftarBisaRating.get(pilih - 1).setRating(rating);
+        Pesanan pesananDipilih = daftarBisaRating.get(pilih - 1);
 
-        System.out.println("Rating berhasil diberikan.");
+        boolean berhasil = simpanRatingKeDB(pesananDipilih.getIdPesanan(), rating);
+
+        if (berhasil) {
+            pesananDipilih.setRating(rating);
+            System.out.println("Rating berhasil diberikan.");
+        } else {
+            System.out.println("Rating gagal disimpan ke database.");
+        }
     }
+
+    public int simpanPesananKeDB(String idTenant, Pesanan pesanan) {
+        int idPesanan = -1;
+
+        String sqlPesanan = "INSERT INTO pesanan (no_meja, id_tenant, status_pesanan) VALUES (?, ?, ?)";
+        String sqlItem = "INSERT INTO item_pesanan (id_pesanan, id_menu, jumlah, catatan) VALUES (?, ?, ?, ?)";
+        String sqlPembayaran = "INSERT INTO pembayaran (id_pesanan, total_bayar, status_bayar, kode_qris) VALUES (?, ?, ?, ?)";
+        String sqlKurangiStok = "UPDATE stok_menu SET jumlah_stok = jumlah_stok - ? WHERE id_menu = ? AND jumlah_stok >= ?";
+
+        Connection conn = null;
+
+        try {
+            conn = KonektorMySQL.getConnection();
+
+            if (conn == null) {
+                return -1;
+            }
+
+            conn.setAutoCommit(false);
+
+            PreparedStatement pstmtPesanan = conn.prepareStatement(sqlPesanan, Statement.RETURN_GENERATED_KEYS);
+            pstmtPesanan.setString(1, pesanan.getNoMeja());
+            pstmtPesanan.setString(2, idTenant);
+            pstmtPesanan.setString(3, pesanan.getStatusPesanan());
+            pstmtPesanan.executeUpdate();
+
+            ResultSet generatedKeys = pstmtPesanan.getGeneratedKeys();
+
+            if (generatedKeys.next()) {
+                idPesanan = generatedKeys.getInt(1);
+            } else {
+                conn.rollback();
+                return -1;
+            }
+
+            PreparedStatement pstmtItem = conn.prepareStatement(sqlItem);
+            PreparedStatement pstmtStok = conn.prepareStatement(sqlKurangiStok);
+
+            for (int i = 0; i < pesanan.getDaftarItem().size(); i++) {
+                ItemPesanan item = pesanan.getDaftarItem().get(i);
+
+                pstmtItem.setInt(1, idPesanan);
+                pstmtItem.setString(2, item.getMenu().getIdProduk());
+                pstmtItem.setInt(3, item.getJumlah());
+                pstmtItem.setString(4, item.getCatatan());
+                pstmtItem.addBatch();
+
+                pstmtStok.setInt(1, item.getJumlah());
+                pstmtStok.setString(2, item.getMenu().getIdProduk());
+                pstmtStok.setInt(3, item.getJumlah());
+                pstmtStok.addBatch();
+            }
+
+            pstmtItem.executeBatch();
+            pstmtStok.executeBatch();
+
+            if (pesanan.getPembayaran() instanceof PembayaranQRIS) {
+                PembayaranQRIS pembayaran = (PembayaranQRIS) pesanan.getPembayaran();
+
+                PreparedStatement pstmtPembayaran = conn.prepareStatement(sqlPembayaran);
+                pstmtPembayaran.setInt(1, idPesanan);
+                pstmtPembayaran.setInt(2, pembayaran.getTotalBayar());
+                pstmtPembayaran.setBoolean(3, pembayaran.getStatusBayar());
+                pstmtPembayaran.setString(4, pembayaran.getKodeQRIS());
+                pstmtPembayaran.executeUpdate();
+                pstmtPembayaran.close();
+            }
+
+            conn.commit();
+
+            generatedKeys.close();
+            pstmtPesanan.close();
+            pstmtItem.close();
+            pstmtStok.close();
+            conn.close();
+
+            return idPesanan;
+        } catch (Exception e) {
+            System.out.println("[DB] Error simpan pesanan: " + e.getMessage());
+
+            try {
+                if (conn != null) {
+                    conn.rollback();
+                    conn.close();
+                }
+            } catch (Exception rollbackError) {
+                System.out.println("[DB] Error rollback: " + rollbackError.getMessage());
+            }
+
+            return -1;
+        }
+    }
+
+    public boolean updateStatusPesananKeDB(int idPesanan, String statusBaru) {
+        String sql = "UPDATE pesanan SET status_pesanan = ? WHERE id_pesanan = ?";
+
+        try {
+            Connection conn = KonektorMySQL.getConnection();
+
+            if (conn == null) {
+                return false;
+            }
+
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, statusBaru);
+            pstmt.setInt(2, idPesanan);
+
+            int affectedRows = pstmt.executeUpdate();
+
+            pstmt.close();
+            conn.close();
+
+            return affectedRows > 0;
+        } catch (Exception e) {
+            System.out.println("[DB] Error update status pesanan: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean simpanRatingKeDB(int idPesanan, Rating rating) {
+        String sql = "INSERT INTO rating (id_pesanan, nilai, ulasan) VALUES (?, ?, ?)";
+
+        try {
+            Connection conn = KonektorMySQL.getConnection();
+
+            if (conn == null) {
+                return false;
+            }
+
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, idPesanan);
+            pstmt.setInt(2, rating.getNilai());
+            pstmt.setString(3, rating.getUlasan());
+
+            int affectedRows = pstmt.executeUpdate();
+
+            pstmt.close();
+            conn.close();
+
+            return affectedRows > 0;
+        } catch (Exception e) {
+            System.out.println("[DB] Error simpan rating: " + e.getMessage());
+            return false;
+        }
+    }
+
+
 }

@@ -29,4 +29,15 @@ public class ItemPesanan {
                 hitungSubTotalKupon(),
                 catatan);
     }
+
+    public Menu getMenu() {
+        return menu;
+    }
+    public int getJumlah() {
+        return jumlah;
+    }
+    public String getCatatan() {
+        return catatan;
+    }
+
 }

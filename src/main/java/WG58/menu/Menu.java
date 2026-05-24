@@ -51,4 +51,9 @@ public abstract class Menu {
                 hargaKupon,
                 status);
     }
+
+    public String getIdMenu() {
+        return idMenu;
+    }
+
 }

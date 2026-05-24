@@ -1,5 +1,7 @@
 package WG58.database;
 
+import WG58.database.KonektorMySQL;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -63,6 +65,7 @@ public class DatabaseInitializer {
             createTenantTable(conn);
             createMenuTable(conn);
             createStokMenuTable(conn);
+            createPesananTable(conn);
             createItemPesananTable(conn);
             createPembayaranTable(conn);
             createRatingTable(conn);
@@ -87,7 +90,7 @@ public class DatabaseInitializer {
                         "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                         ")";
 
-            stmt.executeQuery(sql);
+            stmt.executeUpdate(sql);
             stmt.close();
         } catch (Exception e) {
             System.out.println("[DB] Error create tenant table: " + e.getMessage());
@@ -109,7 +112,7 @@ public class DatabaseInitializer {
                         "  FOREIGN KEY (id_tenant) REFERENCES tenant(id_tenant) ON DELETE CASCADE" +
                         ")";
 
-            stmt.executeQuery(sql);
+            stmt.executeUpdate(sql);
             stmt.close();
         } catch (Exception e) {
             System.out.println("[DB] Error create menu table: " + e.getMessage());
@@ -131,7 +134,7 @@ public class DatabaseInitializer {
                         "  FOREIGN KEY (id_tenant) REFERENCES tenant(id_tenant) ON DELETE CASCADE" +
                         ")";
 
-            stmt.executeQuery(sql);
+            stmt.executeUpdate(sql);
             stmt.close();
         } catch (Exception e) {
             System.out.println("[DB] Error create stok_menu table: " + e.getMessage());
@@ -147,13 +150,13 @@ public class DatabaseInitializer {
                         "  id_pesanan INT PRIMARY KEY AUTO_INCREMENT," +
                         "  no_meja VARCHAR(10) NOT NULL," +
                         "  id_tenant VARCHAR(10) NOT NULL," +
-                        "  status_pesanan VARCHAR(50) NOT NULL DEFAULT 'Dibuat'," +
+                        "  status_pesanan VARCHAR(50) NOT NULL DEFAULT 'Pesanan Diterima'," +
                         "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
                         "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
                         "  FOREIGN KEY (id_tenant) REFERENCES tenant(id_tenant) ON DELETE CASCADE" +
                         ")";
 
-            stmt.executeQuery(sql);
+            stmt.executeUpdate(sql);
             stmt.close();
         } catch (Exception e) {
             System.out.println("[DB] Error create item_pesanan table: " + e.getMessage());
@@ -176,7 +179,7 @@ public class DatabaseInitializer {
                         "  FOREIGN KEY (id_menu) REFERENCES menu(id_menu) ON DELETE CASCADE" +
                         ")";
 
-            stmt.executeQuery(sql);
+            stmt.executeUpdate(sql);
             stmt.close();
         } catch (Exception e) {
             System.out.println("[DB] Error create item_pesanan table: " + e.getMessage());
@@ -198,7 +201,7 @@ public class DatabaseInitializer {
                         "  FOREIGN KEY (id_pesanan) REFERENCES pesanan(id_pesanan) ON DELETE CASCADE" +
                         ")";
 
-            stmt.executeQuery(sql);
+            stmt.executeUpdate(sql);
             stmt.close();
         } catch (Exception e) {
             System.out.println("[DB] Error create pembayaran table: " + e.getMessage());
@@ -219,7 +222,7 @@ public class DatabaseInitializer {
                         "  FOREIGN KEY (id_pesanan) REFERENCES pesanan(id_pesanan) ON DELETE CASCADE" +
                         ")";
 
-            stmt.executeQuery(sql);
+            stmt.executeUpdate(sql);
             stmt.close();
         } catch (Exception e) {
             System.out.println("[DB] Error create rating table: " + e.getMessage());

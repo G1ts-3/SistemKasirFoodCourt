@@ -3,10 +3,14 @@ package WG58.manajemen;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+
 import WG58.menu.Makanan;
 import WG58.menu.Menu;
 import WG58.menu.Minuman;
 import WG58.menu.StokMenu;
+import WG58.database.KonektorMySQL;
 
 public class ManajemenMenu {
     public void tampilkanMenuDenganStok(ArrayList<StokMenu> daftarStokMenu) {
@@ -21,7 +25,7 @@ public class ManajemenMenu {
         System.out.println("+------+----------+-----------------+----------+-------+-------+");
     }
 
-    public void tambahMenuBaru(Scanner input, ArrayList<Menu> daftarMenu, ArrayList<StokMenu> daftarStokMenu) {
+    public void tambahMenuBaru(Scanner input, String idTenant, ArrayList<Menu> daftarMenu, ArrayList<StokMenu> daftarStokMenu) {
         System.out.println("\n=== TAMBAH MENU BARU ===");
         System.out.println("1. Makanan");
         System.out.println("2. Minuman");
@@ -55,10 +59,15 @@ public class ManajemenMenu {
             return;
         }
 
-        daftarMenu.add(menuBaru);
-        daftarStokMenu.add(new StokMenu(menuBaru, stok));
+        boolean berhasil = tambahMenuKeDB(idTenant, menuBaru, stok);
 
-        System.out.println("Menu baru berhasil ditambahkan.");
+        if (berhasil) {
+            daftarMenu.add(menuBaru);
+            daftarStokMenu.add(new StokMenu(menuBaru, stok));
+            System.out.println("Menu baru berhasil ditambahkan.");
+        } else {
+            System.out.println("Menu gagal ditambahkan ke database.");
+        }
     }
 
     public void ubahStokMenu(Scanner input, ArrayList<StokMenu> daftarStokMenu) {
@@ -82,8 +91,83 @@ public class ManajemenMenu {
         int stokBaru = input.nextInt();
         input.nextLine();
 
-        daftarStokMenu.get(nomor - 1).setJumlahStok(stokBaru);
+        StokMenu stokMenu = daftarStokMenu.get(nomor - 1);
+        boolean berhasil = updateStokKeDB(stokMenu.getProduk().getIdProduk(), stokBaru);
 
-        System.out.println("Stok berhasil diubah.");
+        if (berhasil) {
+            stokMenu.setJumlahStok(stokBaru);
+            System.out.println("Stok berhasil diubah.");
+        } else {
+            System.out.println("Stok gagal diubah di database.");
+        }
+
     }
+
+    public boolean tambahMenuKeDB(String idTenant, Menu menu, int stokAwal) {
+        String sqlMenu = "INSERT INTO menu (id_menu, nama_menu, jenis, harga_kupon, id_tenant) VALUES (?, ?, ?, ?, ?)";
+        String sqlStok = "INSERT INTO stok_menu (id_menu, id_tenant, jumlah_stok) VALUES (?, ?, ?)";
+
+        try {
+            Connection conn = KonektorMySQL.getConnection();
+
+            if (conn == null) {
+                return false;
+            }
+
+            conn.setAutoCommit(false);
+
+            PreparedStatement pstmtMenu = conn.prepareStatement(sqlMenu);
+            pstmtMenu.setString(1, menu.getIdProduk());
+            pstmtMenu.setString(2, menu.getNamaMenu());
+            pstmtMenu.setString(3, menu.getJenis());
+            pstmtMenu.setInt(4, menu.getHargaKupon());
+            pstmtMenu.setString(5, idTenant);
+            pstmtMenu.executeUpdate();
+
+            PreparedStatement pstmtStok = conn.prepareStatement(sqlStok);
+            pstmtStok.setString(1, menu.getIdProduk());
+            pstmtStok.setString(2, idTenant);
+            pstmtStok.setInt(3, stokAwal);
+            pstmtStok.executeUpdate();
+
+            conn.commit();
+
+            pstmtMenu.close();
+            pstmtStok.close();
+            conn.close();
+
+            return true;
+        } catch (Exception e) {
+            System.out.println("[DB] Error tambah menu: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean updateStokKeDB(String idMenu, int stokBaru) {
+        String sql = "UPDATE stok_menu SET jumlah_stok = ? WHERE id_menu = ?";
+
+        try {
+            Connection conn = KonektorMySQL.getConnection();
+
+            if (conn == null) {
+                return false;
+            }
+
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, stokBaru);
+            pstmt.setString(2, idMenu);
+
+            int affectedRows = pstmt.executeUpdate();
+
+            pstmt.close();
+            conn.close();
+
+            return affectedRows > 0;
+        } catch (Exception e) {
+            System.out.println("[DB] Error update stok: " + e.getMessage());
+            return false;
+        }
+    }
+
+
 }

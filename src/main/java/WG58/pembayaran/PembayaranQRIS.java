@@ -34,4 +34,8 @@ public class PembayaranQRIS implements Pembayaran {
     public boolean getStatusBayar() {
         return statusBayar;
     }
+
+    public String getKodeQRIS() {
+        return kodeQRIS;
+    }
 }
