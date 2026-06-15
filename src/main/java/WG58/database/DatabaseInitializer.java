@@ -1,466 +1,200 @@
 package WG58.database;
 
-import WG58.database.KonektorMySQL;
-
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * DatabaseInitializer — inisialisasi schema dan data awal.
+ *
+ * Penyederhanaan dari versi sebelumnya (13 method -> 3 method):
+ *  - 7 method createXxxTable(Connection) digabung jadi 1 loop di createAllTables()
+ *  - 3 method insertXxx(Connection) digabung jadi 1 blok di insertSampleData()
+ *
+ * Method tersisa: initialize() · createAllTables() · insertSampleData()
+ */
 public class DatabaseInitializer {
 
-    // Method utk initialize database ketika program di run
     public static void initialize() {
-        System.out.println("[DB] Initializing database...");
-        
-        // Create database
         createDatabase();
-        System.out.println("[DB] Database created.");
-        // Create 7 tables
         createAllTables();
-        System.out.println("[DB] All tables created.");
-        // Insert sample data
         insertSampleData();
-        System.out.println("[DB] Sample data inserted.");
     }
 
-    // Method untuk create db
     public static void createDatabase() {
+        String sql = "CREATE DATABASE IF NOT EXISTS wg58_foodcourt " +
+                     "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
         try {
-            // Connection langsung ke MySQL (tanpa DB)
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306", "root", "");
-            
-            // Statement -> object utk execute SQL Query
+            Connection conn = KonektorMySQL.getConnectionWithoutDB();
+            if (conn == null) return;
             Statement stmt = conn.createStatement();
-
-            // SQL Query untuk create db
-            String sql = "CREATE DATABASE IF NOT EXISTS sistem_kasir_food_court " + 
-                         "CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"; 
-
-            // executeUpdate() -> jalankan CREATE/INSERT/DELETE/UPDATE query
             stmt.executeUpdate(sql);
-
-            // Close resources (statement & connection)
-            stmt.close();
-            conn.close();
+            stmt.close(); conn.close();
+            System.out.println("[DB] Database siap.");
         } catch (Exception e) {
-            System.out.println("[DB] Error create database: " + e.getMessage());
+            System.out.println("[DB] Error buat database: " + e.getMessage());
         }
     }
 
-    // Method utk create 7 tabel
+    /**
+     * Buat semua 7 tabel dengan loop atas array DDL.
+     * Sebelumnya 7 method terpisah — sekarang cukup 1.
+     * Exception handling: try-catch.
+     */
     public static void createAllTables() {
+        String[] ddl = {
+            "CREATE TABLE IF NOT EXISTS tenant (" +
+            "  id_tenant   VARCHAR(10)  NOT NULL PRIMARY KEY," +
+            "  nama_tenant VARCHAR(100) NOT NULL," +
+            "  username    VARCHAR(50)  NOT NULL UNIQUE," +
+            "  password    VARCHAR(100) NOT NULL" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+            "CREATE TABLE IF NOT EXISTS menu (" +
+            "  id_menu     VARCHAR(10)  NOT NULL PRIMARY KEY," +
+            "  nama_menu   VARCHAR(100) NOT NULL," +
+            "  jenis       VARCHAR(20)  NOT NULL," +
+            "  harga_kupon INT          NOT NULL," +
+            "  id_tenant   VARCHAR(10)  NOT NULL," +
+            "  FOREIGN KEY (id_tenant) REFERENCES tenant(id_tenant) ON DELETE CASCADE" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+            "CREATE TABLE IF NOT EXISTS stok_menu (" +
+            "  id_stok     INT         NOT NULL AUTO_INCREMENT PRIMARY KEY," +
+            "  id_menu     VARCHAR(10) NOT NULL UNIQUE," +
+            "  id_tenant   VARCHAR(10) NOT NULL," +
+            "  jumlah_stok INT         NOT NULL DEFAULT 0," +
+            "  FOREIGN KEY (id_menu)   REFERENCES menu(id_menu)     ON DELETE CASCADE," +
+            "  FOREIGN KEY (id_tenant) REFERENCES tenant(id_tenant) ON DELETE CASCADE" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+            "CREATE TABLE IF NOT EXISTS pesanan (" +
+            "  id_pesanan     INT         NOT NULL AUTO_INCREMENT PRIMARY KEY," +
+            "  no_meja        VARCHAR(10) NOT NULL," +
+            "  id_tenant      VARCHAR(10) NOT NULL," +
+            "  status_pesanan VARCHAR(20) NOT NULL DEFAULT 'Menunggu'," +
+            "  FOREIGN KEY (id_tenant) REFERENCES tenant(id_tenant) ON DELETE CASCADE" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+            "CREATE TABLE IF NOT EXISTS item_pesanan (" +
+            "  id_item    INT         NOT NULL AUTO_INCREMENT PRIMARY KEY," +
+            "  id_pesanan INT         NOT NULL," +
+            "  id_menu    VARCHAR(10) NOT NULL," +
+            "  jumlah     INT         NOT NULL DEFAULT 1," +
+            "  catatan    VARCHAR(200)," +
+            "  FOREIGN KEY (id_pesanan) REFERENCES pesanan(id_pesanan) ON DELETE CASCADE," +
+            "  FOREIGN KEY (id_menu)    REFERENCES menu(id_menu)       ON DELETE CASCADE" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+            "CREATE TABLE IF NOT EXISTS pembayaran (" +
+            "  id_pembayaran INT         NOT NULL AUTO_INCREMENT PRIMARY KEY," +
+            "  id_pesanan    INT         NOT NULL UNIQUE," +
+            "  total_bayar   INT         NOT NULL," +
+            "  status_bayar  BOOLEAN     NOT NULL DEFAULT FALSE," +
+            "  kode_qris     VARCHAR(50)," +
+            "  FOREIGN KEY (id_pesanan) REFERENCES pesanan(id_pesanan) ON DELETE CASCADE" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+            "CREATE TABLE IF NOT EXISTS rating (" +
+            "  id_rating  INT         NOT NULL AUTO_INCREMENT PRIMARY KEY," +
+            "  id_pesanan INT         NOT NULL UNIQUE," +
+            "  nilai      INT         NOT NULL," +
+            "  ulasan     VARCHAR(255)," +
+            "  FOREIGN KEY (id_pesanan) REFERENCES pesanan(id_pesanan) ON DELETE CASCADE" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        };
+
         try {
-            // Get connection ke db
             Connection conn = KonektorMySQL.getConnection();
-
-            if (conn == null) {
-                System.out.println("[DB] Connection error");
-                return;
-            }
-
-            // Create 7 tables
-            createTenantTable(conn);
-            createMenuTable(conn);
-            createStokMenuTable(conn);
-            createPesananTable(conn);
-            createItemPesananTable(conn);
-            createPembayaranTable(conn);
-            createRatingTable(conn);
-            
-            // Close connection
-            conn.close();
-        } catch (Exception e) {
-            System.out.println("[DB] Error create tables: " + e.getMessage());
-        }
-    }
-
-    // Method utk create Tenant table
-    public static void createTenantTable(Connection conn) {
-        try {
+            if (conn == null) return;
             Statement stmt = conn.createStatement();
-
-            String sql = "CREATE TABLE IF NOT EXISTS tenant (" +
-                        "  id_tenant VARCHAR(10) PRIMARY KEY," +
-                        "  nama_tenant VARCHAR(100) NOT NULL," +
-                        "  username VARCHAR(50) UNIQUE NOT NULL," +
-                        "  password VARCHAR(100) NOT NULL," +
-                        "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
-                        ")";
-
-            stmt.executeUpdate(sql);
-            stmt.close();
+            for (String sql : ddl) stmt.executeUpdate(sql);
+            stmt.close(); conn.close();
+            System.out.println("[DB] Semua tabel siap.");
         } catch (Exception e) {
-            System.out.println("[DB] Error create tenant table: " + e.getMessage());
+            System.out.println("[DB] Error buat tabel: " + e.getMessage());
         }
     }
 
-    // Method utk create Menu table
-    public static void createMenuTable(Connection conn) {
-        try {
-            Statement stmt = conn.createStatement();
-
-            String sql = "CREATE TABLE IF NOT EXISTS menu (" +
-                        "  id_menu VARCHAR(10) PRIMARY KEY," +
-                        "  nama_menu VARCHAR(100) NOT NULL," +
-                        "  jenis ENUM('Makanan', 'Minuman') NOT NULL," +
-                        "  harga_kupon INT NOT NULL," +
-                        "  id_tenant VARCHAR(10) NOT NULL," +
-                        "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-                        "  FOREIGN KEY (id_tenant) REFERENCES tenant(id_tenant) ON DELETE CASCADE" +
-                        ")";
-
-            stmt.executeUpdate(sql);
-            stmt.close();
-        } catch (Exception e) {
-            System.out.println("[DB] Error create menu table: " + e.getMessage());
-        }
-    }
-
-    // Method utk create StokMenu table
-    public static void createStokMenuTable(Connection conn) {
-        try {
-            Statement stmt = conn.createStatement();
-
-            String sql = "CREATE TABLE IF NOT EXISTS stok_menu (" +
-                        "  id_stok INT PRIMARY KEY AUTO_INCREMENT," +
-                        "  id_menu VARCHAR(10) NOT NULL," +
-                        "  id_tenant VARCHAR(10) NOT NULL," +
-                        "  jumlah_stok INT NOT NULL DEFAULT 0," +
-                        "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
-                        "  FOREIGN KEY (id_menu) REFERENCES menu(id_menu) ON DELETE CASCADE," +
-                        "  FOREIGN KEY (id_tenant) REFERENCES tenant(id_tenant) ON DELETE CASCADE" +
-                        ")";
-
-            stmt.executeUpdate(sql);
-            stmt.close();
-        } catch (Exception e) {
-            System.out.println("[DB] Error create stok_menu table: " + e.getMessage());
-        }
-    }
-
-    // Method utk create Pesanan Table
-    public static void createPesananTable(Connection conn) {
-        try {
-            Statement stmt = conn.createStatement();
-
-            String sql = "CREATE TABLE IF NOT EXISTS pesanan (" +
-                        "  id_pesanan INT PRIMARY KEY AUTO_INCREMENT," +
-                        "  no_meja VARCHAR(10) NOT NULL," +
-                        "  id_tenant VARCHAR(10) NOT NULL," +
-                        "  status_pesanan VARCHAR(50) NOT NULL DEFAULT 'Pesanan Diterima'," +
-                        "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-                        "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
-                        "  FOREIGN KEY (id_tenant) REFERENCES tenant(id_tenant) ON DELETE CASCADE" +
-                        ")";
-
-            stmt.executeUpdate(sql);
-            stmt.close();
-        } catch (Exception e) {
-            System.out.println("[DB] Error create item_pesanan table: " + e.getMessage());
-        }
-    }
-
-    // Method utk create ItemPesanan Table
-    public static void createItemPesananTable(Connection conn) {
-        try {
-            Statement stmt = conn.createStatement();
-
-            String sql = "CREATE TABLE IF NOT EXISTS item_pesanan (" +
-                        "  id_item INT PRIMARY KEY AUTO_INCREMENT," +
-                        "  id_pesanan INT NOT NULL," +
-                        "  id_menu VARCHAR(10) NOT NULL," +
-                        "  jumlah INT NOT NULL," +
-                        "  catatan TEXT," +
-                        "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-                        "  FOREIGN KEY (id_pesanan) REFERENCES pesanan(id_pesanan) ON DELETE CASCADE," +
-                        "  FOREIGN KEY (id_menu) REFERENCES menu(id_menu) ON DELETE CASCADE" +
-                        ")";
-
-            stmt.executeUpdate(sql);
-            stmt.close();
-        } catch (Exception e) {
-            System.out.println("[DB] Error create item_pesanan table: " + e.getMessage());
-        }
-    }
-
-    // Method utk create Pembayaran table
-    public static void createPembayaranTable(Connection conn) {
-        try {
-            Statement stmt = conn.createStatement();
-
-            String sql = "CREATE TABLE IF NOT EXISTS pembayaran (" +
-                        "  id_pembayaran INT PRIMARY KEY AUTO_INCREMENT," +
-                        "  id_pesanan INT NOT NULL UNIQUE," +
-                        "  total_bayar INT NOT NULL," +
-                        "  status_bayar BOOLEAN DEFAULT FALSE," +
-                        "  kode_qris VARCHAR(100)," +
-                        "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-                        "  FOREIGN KEY (id_pesanan) REFERENCES pesanan(id_pesanan) ON DELETE CASCADE" +
-                        ")";
-
-            stmt.executeUpdate(sql);
-            stmt.close();
-        } catch (Exception e) {
-            System.out.println("[DB] Error create pembayaran table: " + e.getMessage());
-        }
-    }
-
-    // Method utk create Rating table
-    public static void createRatingTable(Connection conn) {
-        try {
-            Statement stmt = conn.createStatement();
-
-            String sql = "CREATE TABLE IF NOT EXISTS rating (" +
-                        "  id_rating INT PRIMARY KEY AUTO_INCREMENT," +
-                        "  id_pesanan INT NOT NULL UNIQUE," +
-                        "  nilai INT NOT NULL," +
-                        "  ulasan TEXT," +
-                        "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-                        "  FOREIGN KEY (id_pesanan) REFERENCES pesanan(id_pesanan) ON DELETE CASCADE" +
-                        ")";
-
-            stmt.executeUpdate(sql);
-            stmt.close();
-        } catch (Exception e) {
-            System.out.println("[DB] Error create rating table: " + e.getMessage());
-        }
-    }
-
-    // Method utk insert sample data
+    /**
+     * Insert data awal hanya jika tabel masih kosong.
+     * Sebelumnya 3 method terpisah (insertTenants, insertMenus, insertStoks)
+     * — sekarang digabung jadi 1 method, exception handling: try-catch.
+     */
     public static void insertSampleData() {
         try {
             Connection conn = KonektorMySQL.getConnection();
+            if (conn == null) return;
 
-            if (conn == null) {
-                System.out.println("[DB] Connection error");
-                return;
+            // Skip jika data sudah ada
+            Statement check = conn.createStatement();
+            ResultSet rs = check.executeQuery("SELECT COUNT(*) FROM tenant");
+            rs.next();
+            boolean sudahAda = rs.getInt(1) > 0;
+            rs.close(); check.close();
+            if (sudahAda) { conn.close(); return; }
+
+            // Tenant
+            String sqlT = "INSERT INTO tenant (id_tenant,nama_tenant,username,password) VALUES (?,?,?,?)";
+            String[][] tnt = {
+                {"T01","Warung Nasi Gudeg Bu Sari","tenant1","pass1"},
+                {"T02","Mie Ayam Bakso Pak Budi",  "tenant2","pass2"},
+                {"T03","Es Teh & Jus Segar",        "tenant3","pass3"},
+                {"T04","Sate & Grill Corner",        "tenant4","pass4"},
+                {"T05","Bakso Malang Pak Darto",     "tenant5","pass5"}
+            };
+            PreparedStatement psT = conn.prepareStatement(sqlT);
+            for (String[] r : tnt) {
+                psT.setString(1,r[0]); psT.setString(2,r[1]);
+                psT.setString(3,r[2]); psT.setString(4,r[3]);
+                psT.addBatch();
             }
+            psT.executeBatch(); psT.close();
 
-            // Check apakah tenant table sudah ada data
-            Statement stmt = conn.createStatement();
-            // ResultSet -> object yang hold hasil dari SELECT quary
-            ResultSet rs = stmt.executeQuery("SELECT COUNT(*) AS count FROM tenant");
-
-            rs.next(); // Move kehasil pertama
-            int count = rs.getInt("count");
-
-            rs.close();
-            stmt.close();
-
-            if (count > 0) {
-                // Data sudah ada, skip insert sample data
-                return;
+            // Menu  {id, nama, jenis, kupon, tenant}
+            String sqlM = "INSERT INTO menu (id_menu,nama_menu,jenis,harga_kupon,id_tenant) VALUES (?,?,?,?,?)";
+            Object[][] mnu = {
+                {"M01","Nasi Gudeg Ayam",      "Makanan",3,"T01"},{"M02","Nasi Gudeg Telur",    "Makanan",2,"T01"},
+                {"M03","Nasi Gudeg Tofu",      "Makanan",2,"T01"},{"M04","Nasi Kucing",          "Makanan",1,"T01"},
+                {"M05","Mie Ayam Biasa",       "Makanan",2,"T02"},{"M06","Mie Ayam Bakso",       "Makanan",3,"T02"},
+                {"M07","Mie Ayam Spesial",     "Makanan",4,"T02"},{"M08","Bakso Biasa",          "Makanan",2,"T02"},
+                {"M09","Es Teh Manis",         "Minuman",1,"T03"},{"M10","Es Jeruk Segar",       "Minuman",2,"T03"},
+                {"M11","Jus Alpukat",          "Minuman",2,"T03"},{"M12","Es Campur",            "Minuman",2,"T03"},
+                {"M13","Sate Ayam (10 tusuk)", "Makanan",3,"T04"},{"M14","Sate Kambing (10 tusuk)","Makanan",4,"T04"},
+                {"M15","Ayam Bakar",           "Makanan",4,"T04"},{"M16","Ikan Bakar",           "Makanan",4,"T04"},
+                {"M17","Bakso Malang Biasa",   "Makanan",2,"T05"},{"M18","Bakso Malang Spesial", "Makanan",3,"T05"},
+                {"M19","Mie Goreng Bakso",     "Makanan",3,"T05"},{"M20","Tahu Bakso",           "Makanan",2,"T05"}
+            };
+            PreparedStatement psM = conn.prepareStatement(sqlM);
+            for (Object[] m : mnu) {
+                psM.setString(1,(String)m[0]); psM.setString(2,(String)m[1]);
+                psM.setString(3,(String)m[2]); psM.setInt(4,(int)m[3]);
+                psM.setString(5,(String)m[4]); psM.addBatch();
             }
+            psM.executeBatch(); psM.close();
 
-            // Insert sample data
-            insertTenants(conn);
-            insertMenus(conn);
-            insertStoks(conn);
+            // Stok {id_menu, id_tenant, jumlah}
+            String sqlS = "INSERT INTO stok_menu (id_menu,id_tenant,jumlah_stok) VALUES (?,?,?)";
+            Object[][] stk = {
+                {"M01","T01",20},{"M02","T01",25},{"M03","T01",20},{"M04","T01",30},
+                {"M05","T02",30},{"M06","T02",25},{"M07","T02",20},{"M08","T02",35},
+                {"M09","T03",50},{"M10","T03",40},{"M11","T03",30},{"M12","T03",35},
+                {"M13","T04",20},{"M14","T04",15},{"M15","T04",20},{"M16","T04",20},
+                {"M17","T05",30},{"M18","T05",25},{"M19","T05",25},{"M20","T05",35}
+            };
+            PreparedStatement psS = conn.prepareStatement(sqlS);
+            for (Object[] s : stk) {
+                psS.setString(1,(String)s[0]); psS.setString(2,(String)s[1]);
+                psS.setInt(3,(int)s[2]); psS.addBatch();
+            }
+            psS.executeBatch(); psS.close();
 
             conn.close();
+            System.out.println("[DB] Data awal berhasil dimasukkan.");
+
         } catch (Exception e) {
-            System.out.println("[DB] Error insert sample data: " + e.getMessage());
-        }
-    }
-
-    // Method utk insert sample tenants
-    public static void insertTenants(Connection conn) {
-        try {
-            // PreparedStatement -> prepared SQL query dgn ? parameter
-            // ? ->  akan di fill dgn setString/setInt later.
-            String sql = "INSERT INTO tenant (id_tenant, nama_tenant, username, password) VALUES (?, ?, ?, ?)";
-        
-            PreparedStatement pstmt = conn.prepareStatement(sql);
-
-            // Insert tenant 1
-            pstmt.setString(1, "T001");     // ? pertama    = "T001"
-            pstmt.setString(2, "Warung Bude");     // ? kedua      = "Warung Bude"
-            pstmt.setString(3, "warung_bude");     // ? ketiga     = "warung_bude"
-            pstmt.setString(4, "12345");     // ? keempat    = "12345"
-            pstmt.addBatch();     // Tambah ke batch (belum di execute)
-
-            // Insert tenant 2
-            pstmt.setString(1, "T002");
-            pstmt.setString(2, "Warung Soto");
-            pstmt.setString(3, "warung_soto");
-            pstmt.setString(4, "12345");
-            pstmt.addBatch();
-
-            // Insert tenant 3
-            pstmt.setString(1, "T003");
-            pstmt.setString(2, "Toko Minuman");
-            pstmt.setString(3, "toko_minuman");
-            pstmt.setString(4, "12345");
-            pstmt.addBatch();
-
-            // executeBatch() -> jalankan semua addBatch sekaligus
-            pstmt.executeBatch();
-            pstmt.close();
-
-        } catch (SQLException e) {
-            System.out.println("[DB] Error insert tenants: " + e.getMessage());
-        }
-    }
-
-    // Method untuk insert sample menus
-    public static void insertMenus(Connection conn) {
-        try {
-        String sql = "INSERT INTO menu (id_menu, nama_menu, jenis, harga_kupon, id_tenant) VALUES (?, ?, ?, ?, ?)";
-        
-        PreparedStatement pstmt = conn.prepareStatement(sql);
-        
-        // Warung Bude menus
-        pstmt.setString(1, "M001");
-        pstmt.setString(2, "Nasi Kuning");
-        pstmt.setString(3, "Makanan");
-        pstmt.setInt(4, 3);
-        pstmt.setString(5, "T001");
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M002");
-        pstmt.setString(2, "Ayam Goreng");
-        pstmt.setString(3, "Makanan");
-        pstmt.setInt(4, 4);
-        pstmt.setString(5, "T001");
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M003");
-        pstmt.setString(2, "Teh Hangat");
-        pstmt.setString(3, "Minuman");
-        pstmt.setInt(4, 1);
-        pstmt.setString(5, "T001");
-        pstmt.addBatch();
-        
-        // Warung Soto menus
-        pstmt.setString(1, "M004");
-        pstmt.setString(2, "Soto Ayam");
-        pstmt.setString(3, "Makanan");
-        pstmt.setInt(4, 3);
-        pstmt.setString(5, "T002");
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M005");
-        pstmt.setString(2, "Perkedel");
-        pstmt.setString(3, "Makanan");
-        pstmt.setInt(4, 4);
-        pstmt.setString(5, "T002");
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M006");
-        pstmt.setString(2, "Jus Jeruk");
-        pstmt.setString(3, "Minuman");
-        pstmt.setInt(4, 1);
-        pstmt.setString(5, "T002");
-        pstmt.addBatch();
-        
-        // Toko Minuman menus
-        pstmt.setString(1, "M007");
-        pstmt.setString(2, "Kopi Hitam");
-        pstmt.setString(3, "Minuman");
-        pstmt.setInt(4, 3);
-        pstmt.setString(5, "T003");
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M008");
-        pstmt.setString(2, "Cappuccino");
-        pstmt.setString(3, "Minuman");
-        pstmt.setInt(4, 4);
-        pstmt.setString(5, "T003");
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M009");
-        pstmt.setString(2, "Smoothie Mangga");
-        pstmt.setString(3, "Minuman");
-        pstmt.setInt(4, 1);
-        pstmt.setString(5, "T003");
-        pstmt.addBatch();
-        
-        pstmt.executeBatch();
-        pstmt.close();
-        
-        } catch (Exception e) {
-        System.out.println("Error insert menus: " + e.getMessage());
-        }
-    }
-    
-    // Method untuk insert sample stoks
-    public static void insertStoks(Connection conn) {
-        try {
-        String sql = "INSERT INTO stok_menu (id_menu, id_tenant, jumlah_stok) VALUES (?, ?, ?)";
-        
-        PreparedStatement pstmt = conn.prepareStatement(sql);
-        
-        // Warung Bude stok
-        pstmt.setString(1, "M001");
-        pstmt.setString(2, "T001");
-        pstmt.setInt(3, 50);
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M002");
-        pstmt.setString(2, "T001");
-        pstmt.setInt(3, 30);
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M003");
-        pstmt.setString(2, "T001");
-        pstmt.setInt(3, 100);
-        pstmt.addBatch();
-        
-        // Warung Soto stok
-        pstmt.setString(1, "M004");
-        pstmt.setString(2, "T002");
-        pstmt.setInt(3, 25);
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M005");
-        pstmt.setString(2, "T002");
-        pstmt.setInt(3, 40);
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M006");
-        pstmt.setString(2, "T002");
-        pstmt.setInt(3, 80);
-        pstmt.addBatch();
-        
-        // Toko Minuman stok
-        pstmt.setString(1, "M007");
-        pstmt.setString(2, "T003");
-        pstmt.setInt(3, 60);
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M008");
-        pstmt.setString(2, "T003");
-        pstmt.setInt(3, 35);
-        pstmt.addBatch();
-        
-        pstmt.setString(1, "M009");
-        pstmt.setString(2, "T003");
-        pstmt.setInt(3, 45);
-        pstmt.addBatch();
-        
-        pstmt.executeBatch();
-        pstmt.close();
-        
-        } catch (Exception e) {
-        System.out.println("Error insert stoks: " + e.getMessage());
+            System.out.println("[DB] Error insert data awal: " + e.getMessage());
         }
     }
 }
-
-// ============================================================================
-// Penjelasan JDBC Terms:
-// 
-// Statement               = untuk execute SQL query
-// PreparedStatement       = statement dengan ? parameter (prevent SQL injection)
-// ResultSet               = hasil dari SELECT query
-// executeUpdate()         = jalankan CREATE/INSERT/UPDATE/DELETE
-// executeQuery()          = jalankan SELECT
-// setString(index, value) = fill ? parameter dengan string
-// setInt(index, value)    = fill ? parameter dengan integer
-// addBatch()              = tambah statement ke batch (belum execute)
-// executeBatch()          = jalankan semua batch sekaligus
-// close()                 = tutup resource (penting!)
-// ============================================================================

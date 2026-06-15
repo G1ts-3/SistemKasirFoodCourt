@@ -1,59 +1,33 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package WG58.menu;
 
 /**
+ * Menu — abstract class (Abstraction).
  *
- * @author hi
+ * Perubahan dari versi sebelumnya:
+ *  - tampilkanBarisTabel(int)          dihapus — CLI
+ *  - tampilkanBarisTabel(int, String)  dihapus — CLI (keduanya adalah overloading,
+ *    tapi sudah tidak relevan karena GUI menggunakan JTable, bukan System.out)
+ *  - getIdMenu()  dihapus — duplikat dari getIdProduk(), keduanya return field idMenu
+ *
+ * Overloading masih dipertahankan melalui constructor overloading di Pesanan.java.
  */
 public abstract class Menu {
+
     protected String idMenu;
     protected String namaMenu;
-    protected int hargaKupon;
+    protected int    hargaKupon;
 
     public Menu(String idMenu, String namaMenu, int hargaKupon) {
-        this.idMenu = idMenu;
-        this.namaMenu = namaMenu;
+        this.idMenu     = idMenu;
+        this.namaMenu   = namaMenu;
         this.hargaKupon = hargaKupon;
     }
 
-    public String getIdProduk() {
-        return idMenu;
-    }
+    // Getter
+    public String getIdProduk()   { return idMenu; }
+    public String getNamaMenu()   { return namaMenu; }
+    public int    getHargaKupon() { return hargaKupon; }
 
-    public String getNamaMenu() {
-        return namaMenu;
-    }
-
-    public int getHargaKupon() {
-        return hargaKupon;
-    }
-
+    /** Abstract — di-override oleh Makanan dan Minuman (Polymorphism). */
     public abstract String getJenis();
-    
-    public void tampilkanBarisTabel(int nomor) {
-        System.out.printf("| %-4d | %-8s | %-15s | %-8s | %-5d |\n",
-                nomor,
-                idMenu,
-                namaMenu,
-                getJenis(),
-                hargaKupon);
-    }
-
-    public void tampilkanBarisTabel(int nomor, String status) {
-        System.out.printf("| %-4d | %-8s | %-15s | %-8s | %-5d | %-14s |\n",
-                nomor,
-                idMenu,
-                namaMenu,
-                getJenis(),
-                hargaKupon,
-                status);
-    }
-
-    public String getIdMenu() {
-        return idMenu;
-    }
-
 }

@@ -1,127 +1,78 @@
 package WG58.pesanan;
 
-import WG58.menu.Menu;
 import WG58.pembayaran.Pembayaran;
+import WG58.menu.Menu;
+
 import java.util.ArrayList;
 
+/**
+ * Pesanan — satu transaksi pemesanan.
+ *
+ * Perubahan dari versi sebelumnya:
+ *  - tampilkanPesananTabel() dihapus  — CLI
+ *  - tampilkanRingkasTabel() dihapus  — CLI
+ *  - Pesanan(String noMeja)  dihapus  — 1-param, tidak pernah dipakai
+ *
+ * Constructor overloading dipertahankan pada 2 constructor:
+ *  1. Pesanan(noMeja, namaTenant)             -> buat pesanan baru dari GUI
+ *  2. Pesanan(id, noMeja, idTenant, nama, st) -> rekonstruksi dari DB
+ */
 public class Pesanan {
-    private String noMeja;
-    private String statusPesanan;
+
+    private int                    idPesanan;
+    private String                 noMeja;
+    private String                 idTenant;
+    private String                 namaTenant;
+    private String                 statusPesanan;
     private ArrayList<ItemPesanan> daftarItem;
-    private Pembayaran pembayaran;
-    private Rating rating;
-    private String namaTenant;
-    private int idPesanan;
-    private String idTenant;
+    private Pembayaran             pembayaran;
+    private Rating                 rating;
 
-    public Pesanan(String noMeja) {
-        this(0, noMeja, null, "-", "Pesanan Diterima");
-    }
-
+    /** Constructor 1 — buat pesanan baru (Overloading). */
     public Pesanan(String noMeja, String namaTenant) {
-        this(0, noMeja, null, namaTenant, "Pesanan Diterima");
+        this.noMeja        = noMeja;
+        this.namaTenant    = namaTenant;
+        this.statusPesanan = "Menunggu";
+        this.daftarItem    = new ArrayList<>();
     }
 
-    public Pesanan(int idPesanan, String noMeja, String idTenant, String namaTenant, String statusPesanan) {
-        this.idPesanan = idPesanan;
-        this.noMeja = noMeja;
-        this.idTenant = idTenant;
-        this.namaTenant = namaTenant;
+    /** Constructor 2 — rekonstruksi dari database (Overloading). */
+    public Pesanan(int idPesanan, String noMeja, String idTenant,
+                   String namaTenant, String statusPesanan) {
+        this.idPesanan     = idPesanan;
+        this.noMeja        = noMeja;
+        this.idTenant      = idTenant;
+        this.namaTenant    = namaTenant;
         this.statusPesanan = statusPesanan;
-        this.daftarItem = new ArrayList<ItemPesanan>();
-        this.pembayaran = null;
-        this.rating = null;
+        this.daftarItem    = new ArrayList<>();
     }
-
 
     public void tambahItem(Menu menu, int jumlah, String catatan) {
-        ItemPesanan item = new ItemPesanan(menu, jumlah, catatan);
-        daftarItem.add(item);
+        daftarItem.add(new ItemPesanan(menu, jumlah, catatan));
     }
 
+    /** Total harga dalam satuan kupon. */
     public int hitungTotalKupon() {
         int total = 0;
-
-        for (int i = 0; i < daftarItem.size(); i++) {
-            total = total + daftarItem.get(i).hitungSubTotalKupon();
-        }
-
+        for (ItemPesanan item : daftarItem) total += item.hitungSubTotalKupon();
         return total;
     }
 
-    public int hitungTotalRupiah() {
-        return hitungTotalKupon() * 5000;
-    }
+    /** Total harga dalam Rupiah (1 kupon = Rp5.000). */
+    public int hitungTotalRupiah() { return hitungTotalKupon() * 5000; }
 
-    public void tampilkanPesananTabel() {
-        System.out.println("+-----------------+----------+--------+--------+----------------------+");
-        System.out.println("| Menu            | Jenis    | Jumlah | Kupon  | Catatan              |");
-        System.out.println("+-----------------+----------+--------+--------+----------------------+");
+    public void ubahStatus(String statusBaru) { this.statusPesanan = statusBaru; }
 
-        for (int i = 0; i < daftarItem.size(); i++) {
-            daftarItem.get(i).tampilkanItemTabel();
-        }
+    // Getter & Setter
+    public int                    getIdPesanan()     { return idPesanan; }
+    public String                 getNoMeja()        { return noMeja; }
+    public String                 getIdTenant()      { return idTenant; }
+    public String                 getNamaTenant()    { return namaTenant; }
+    public String                 getStatusPesanan() { return statusPesanan; }
+    public ArrayList<ItemPesanan> getDaftarItem()    { return daftarItem; }
+    public Pembayaran             getPembayaran()    { return pembayaran; }
+    public Rating                 getRating()        { return rating; }
 
-        System.out.println("+-----------------+----------+--------+--------+----------------------+");
-        System.out.println("Tenant       : " + namaTenant);
-        System.out.println("Meja         : " + noMeja);
-        System.out.println("Status       : " + statusPesanan);
-        System.out.println("Total Kupon  : " + hitungTotalKupon());
-        System.out.println("Total Rupiah : Rp" + hitungTotalRupiah());
-    }
-
-    public void tampilkanRingkasTabel(int nomor) {
-        System.out.printf("| %-4d | %-8s | %-18s | %-11d | %-12s |\n",
-                nomor,
-                noMeja,
-                statusPesanan,
-                hitungTotalKupon(),
-                "Rp" + hitungTotalRupiah());
-    }
-
-    
-    public void ubahStatus(String statusBaru) {
-        this.statusPesanan = statusBaru;
-    }
-
-    public String getStatusPesanan() {
-        return statusPesanan;
-    }
-
-    public String getNoMeja() {
-        return noMeja;
-    }
-
-    public void setPembayaran(Pembayaran pembayaran) {
-        this.pembayaran = pembayaran;
-    }
-
-    public Pembayaran getPembayaran() {
-        return pembayaran;
-    }
-
-    public void setRating(Rating rating) {
-        this.rating = rating;
-    }
-
-    public Rating getRating() {
-        return rating;
-    }
-
-    public String getNamaTenant() {
-        return namaTenant;
-    }
-
-    public int getIdPesanan() {
-        return idPesanan;
-    }
-
-    public String getIdTenant() {
-        return idTenant;
-    }
-
-    public ArrayList<ItemPesanan> getDaftarItem() {
-        return daftarItem;
-    }
-
+    public void setPembayaran(Pembayaran p) { this.pembayaran = p; }
+    public void setRating(Rating r)         { this.rating = r; }
 }
