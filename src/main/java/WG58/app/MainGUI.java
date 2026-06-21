@@ -26,13 +26,15 @@ import javax.swing.table.DefaultTableModel;
  *
  * Cara menggunakan:
  * 1. Jalankan class Main atau MainGUI.
- * 2. Pilih mode Pelanggan untuk memilih tenant, meja, menu, checkout, ambil pesanan,
- *    dan memberi rating.
+ * 2. Pilih mode Pelanggan untuk memilih tenant, meja, menu, checkout, ambil
+ * pesanan,
+ * dan memberi rating.
  * 3. Pilih mode Tenant untuk login, melihat pesanan, mengubah status pesanan,
- *    menambah menu, dan mengubah stok.
+ * menambah menu, dan mengubah stok.
  *
  * File ini sengaja memakai komponen Swing dasar saja: JFrame, JPanel, JButton,
- * JTable, JTextField, JComboBox, JSpinner, dan JTabbedPane. Tidak ada warna custom,
+ * JTable, JTextField, JComboBox, JSpinner, dan JTabbedPane. Tidak ada warna
+ * custom,
  * ikon, atau styling khusus agar lebih mudah dipahami dan dijelaskan.
  */
 public class MainGUI extends JFrame {
@@ -55,7 +57,6 @@ public class MainGUI extends JFrame {
     private Tenant tenantLogin;
     private Meja mejaDipilih;
 
-    private DefaultTableModel modelTenant;
     private DefaultTableModel modelMenu;
     private DefaultTableModel modelKeranjang;
     private DefaultTableModel modelPesananPelanggan;
@@ -67,7 +68,6 @@ public class MainGUI extends JFrame {
     private DefaultTableModel modelMenuTenant;
     private DefaultTableModel modelStokTenant;
 
-    private JTable tabelTenant;
     private JTable tabelMenu;
     private JTable tabelKeranjang;
     private JTable tabelPesananPelanggan;
@@ -75,6 +75,12 @@ public class MainGUI extends JFrame {
     private JTable tabelRatingPelanggan;
     private JTable tabelPesananTenant;
     private JTable tabelStokTenant;
+    private JTable tabelRiwayatTenant;
+    private JTable tabelRatingTenant;
+    private JTable tabelMenuTenant;
+
+    private JSpinner inputJumlah;
+    private JPanel panelTenantButtons;
 
     private JLabel labelTotalKeranjang;
     private JLabel labelTenantDipilih;
@@ -145,8 +151,34 @@ public class MainGUI extends JFrame {
         tombolTenant.setPreferredSize(new Dimension(260, 44));
 
         tombolPelanggan.addActionListener(e -> {
-            pelanggan.aksesSistem();
-            pindahPanel("PILIH_TENANT");
+            while (true) {
+                String input = JOptionPane.showInputDialog(this, "Masukkan nomor meja:", "Input Nomor Meja",
+                        JOptionPane.QUESTION_MESSAGE);
+                if (input == null) {
+                    return; // Cancelled
+                }
+                String mejaStr = input.trim();
+                if (mejaStr.isEmpty()) {
+                    tampilError("Nomor meja harus diisi.");
+                    continue;
+                }
+                int noMejaVal;
+                try {
+                    noMejaVal = Integer.parseInt(mejaStr);
+                } catch (NumberFormatException ex) {
+                    tampilError("Nomor meja harus berupa angka.");
+                    continue;
+                }
+                if (noMejaVal < 1) {
+                    tampilError("Nomor meja tidak boleh negatif atau di bawah 1.");
+                    continue;
+                }
+
+                mejaDipilih = new Meja(mejaStr);
+                pelanggan.aksesSistem();
+                pindahPanel("PILIH_TENANT");
+                break;
+            }
         });
         tombolTenant.addActionListener(e -> pindahPanel("LOGIN_TENANT"));
 
@@ -180,39 +212,11 @@ public class MainGUI extends JFrame {
         JPanel panel = panelBerpadding(new BorderLayout(GAP, GAP));
         panel.add(header("Pilih Tenant", e -> pindahPanel("HOME")), BorderLayout.NORTH);
 
-        modelTenant = modelTabel("No", "ID Tenant", "Nama Tenant", "Jumlah Menu");
-        tabelTenant = new JTable(modelTenant);
-        panel.add(new JScrollPane(tabelTenant), BorderLayout.CENTER);
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        panelTenantButtons = new JPanel();
+        centerWrapper.add(panelTenantButtons, new GridBagConstraints());
 
-        JPanel bawah = new JPanel(new FlowLayout(FlowLayout.LEFT, GAP, GAP));
-        bawah.setBorder(new EmptyBorder(4, 0, 0, 0));
-        JTextField inputMeja = new JTextField(10);
-        JButton tombolLanjut = new JButton("Lanjut");
-        tombolLanjut.setPreferredSize(new Dimension(110, 36));
-
-        tombolLanjut.addActionListener(e -> {
-            int row = tabelTenant.getSelectedRow();
-            if (row < 0) {
-                tampilError("Pilih tenant terlebih dahulu.");
-                return;
-            }
-            if (inputMeja.getText().trim().isEmpty()) {
-                tampilError("Nomor meja harus diisi.");
-                return;
-            }
-
-            ArrayList<Tenant> daftarTenant = manajemenTenant.getDaftarTenant();
-            tenantDipilih = daftarTenant.get(row);
-            mejaDipilih = new Meja(inputMeja.getText().trim());
-            keranjang.clear();
-            pindahPanel("PELANGGAN");
-        });
-
-        bawah.add(new JLabel("Nomor meja:"));
-        bawah.add(inputMeja);
-        bawah.add(tombolLanjut);
-        panel.add(bawah, BorderLayout.SOUTH);
-
+        panel.add(centerWrapper, BorderLayout.CENTER);
         return panel;
     }
 
@@ -240,6 +244,11 @@ public class MainGUI extends JFrame {
 
         modelMenu = modelTabel("No", "ID", "Nama", "Jenis", "Kupon", "Stok");
         tabelMenu = new JTable(modelMenu);
+        tabelMenu.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                updateSpinnerMax(tabelMenu, inputJumlah);
+            }
+        });
         panel.add(new JScrollPane(tabelMenu), BorderLayout.CENTER);
 
         modelKeranjang = modelTabel("No", "Nama", "Jumlah", "Catatan", "Subtotal Kupon");
@@ -253,7 +262,7 @@ public class MainGUI extends JFrame {
         panel.add(kanan, BorderLayout.EAST);
 
         JPanel bawah = new JPanel(new FlowLayout(FlowLayout.LEFT, GAP, GAP));
-        JSpinner inputJumlah = new JSpinner(new SpinnerNumberModel(1, 1, 99, 1));
+        inputJumlah = new JSpinner(new SpinnerNumberModel(1, 1, 99, 1));
         JTextField inputCatatan = new JTextField(12);
         JButton tombolTambah = new JButton("Tambah");
         JButton tombolHapus = new JButton("Hapus Item");
@@ -414,14 +423,16 @@ public class MainGUI extends JFrame {
     private JPanel buatTabRiwayatTenant() {
         JPanel panel = panelBerpadding(new BorderLayout(GAP, GAP));
         modelRiwayatTenant = modelTabel("ID", "Meja", "Status", "Total Kupon", "Total Rupiah");
-        panel.add(new JScrollPane(new JTable(modelRiwayatTenant)), BorderLayout.CENTER);
+        tabelRiwayatTenant = new JTable(modelRiwayatTenant);
+        panel.add(new JScrollPane(tabelRiwayatTenant), BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel buatTabRatingTenant() {
         JPanel panel = panelBerpadding(new BorderLayout(GAP, GAP));
         modelRatingTenant = modelTabel("ID Pesanan", "Meja", "Nilai", "Ulasan");
-        panel.add(new JScrollPane(new JTable(modelRatingTenant)), BorderLayout.CENTER);
+        tabelRatingTenant = new JTable(modelRatingTenant);
+        panel.add(new JScrollPane(tabelRatingTenant), BorderLayout.CENTER);
         return panel;
     }
 
@@ -430,7 +441,7 @@ public class MainGUI extends JFrame {
 
         JPanel form = new JPanel(new GridLayout(0, 2, GAP, GAP));
         form.setBorder(new EmptyBorder(0, 0, GAP, 0));
-        JComboBox<String> inputJenis = new JComboBox<>(new String[]{"Makanan", "Minuman"});
+        JComboBox<String> inputJenis = new JComboBox<>(new String[] { "Makanan", "Minuman" });
         JTextField inputId = new JTextField();
         JTextField inputNama = new JTextField();
         JSpinner inputHarga = new JSpinner(new SpinnerNumberModel(1, 1, 999, 1));
@@ -454,7 +465,8 @@ public class MainGUI extends JFrame {
         panel.add(form, BorderLayout.NORTH);
 
         modelMenuTenant = modelTabel("ID", "Nama", "Jenis", "Kupon");
-        panel.add(new JScrollPane(new JTable(modelMenuTenant)), BorderLayout.CENTER);
+        tabelMenuTenant = new JTable(modelMenuTenant);
+        panel.add(new JScrollPane(tabelMenuTenant), BorderLayout.CENTER);
 
         return panel;
     }
@@ -479,17 +491,47 @@ public class MainGUI extends JFrame {
     }
 
     private void isiTabelTenant() {
-        modelTenant.setRowCount(0);
+        panelTenantButtons.removeAll();
         ArrayList<Tenant> daftarTenant = manajemenTenant.getDaftarTenant();
-        for (int i = 0; i < daftarTenant.size(); i++) {
-            Tenant tenant = daftarTenant.get(i);
-            modelTenant.addRow(new Object[]{
-                i + 1,
-                tenant.getIdPengguna(),
-                tenant.getNamaTenant(),
-                tenant.getDaftarMenu().size()
+        int cols = 3;
+        int rows = (int) Math.ceil((double) daftarTenant.size() / cols);
+        panelTenantButtons.setLayout(new GridLayout(rows, cols, 24, 24));
+
+        for (Tenant tenant : daftarTenant) {
+            JButton btn = new JButton(
+                    "<html><center><b>" + tenant.getNamaTenant() + "</b><br><font size='4' color='#666666'>"
+                            + tenant.getDaftarMenu().size() + " Menu</font></center></html>");
+            btn.setPreferredSize(new Dimension(220, 150));
+            btn.setFont(FONT_NORMAL);
+            btn.setFocusPainted(false);
+
+            btn.setBackground(new Color(245, 247, 250));
+            btn.setForeground(new Color(33, 37, 41));
+            btn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(218, 224, 233), 2, true),
+                    BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+
+            btn.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseEntered(java.awt.event.MouseEvent evt) {
+                    btn.setBackground(new Color(228, 235, 245));
+                }
+
+                public void mouseExited(java.awt.event.MouseEvent evt) {
+                    btn.setBackground(new Color(245, 247, 250));
+                }
             });
+
+            btn.addActionListener(e -> {
+                tenantDipilih = tenant;
+                keranjang.clear();
+                pindahPanel("PELANGGAN");
+            });
+
+            panelTenantButtons.add(btn);
         }
+
+        panelTenantButtons.revalidate();
+        panelTenantButtons.repaint();
     }
 
     private void isiSemuaTabelPelanggan() {
@@ -497,12 +539,13 @@ public class MainGUI extends JFrame {
             return;
         }
         labelTenantDipilih.setText("Pelanggan - " + tenantDipilih.getNamaTenant()
-            + " - Meja " + mejaDipilih.getNoMeja());
+                + " - Meja " + mejaDipilih.getNoMeja());
         isiTabelMenu();
         isiTabelKeranjang();
         isiTabelPesananPelanggan();
         isiTabelAmbil();
         isiTabelRatingPelanggan();
+        updateSpinnerMax(tabelMenu, inputJumlah);
     }
 
     private void isiTabelMenu() {
@@ -511,15 +554,16 @@ public class MainGUI extends JFrame {
         for (int i = 0; i < daftarStok.size(); i++) {
             StokMenu stok = daftarStok.get(i);
             Menu menu = stok.getProduk();
-            modelMenu.addRow(new Object[]{
-                i + 1,
-                menu.getIdProduk(),
-                menu.getNamaMenu(),
-                menu.getJenis(),
-                menu.getHargaKupon(),
-                stok.getJumlahStok()
+            modelMenu.addRow(new Object[] {
+                    i + 1,
+                    menu.getIdProduk(),
+                    menu.getNamaMenu(),
+                    menu.getJenis(),
+                    menu.getHargaKupon(),
+                    stok.getJumlahStok()
             });
         }
+        aturLebarKolom(tabelMenu);
     }
 
     private void isiTabelKeranjang() {
@@ -529,15 +573,16 @@ public class MainGUI extends JFrame {
             ItemPesanan item = keranjang.get(i);
             int subtotal = item.hitungSubTotalKupon();
             total += subtotal;
-            modelKeranjang.addRow(new Object[]{
-                i + 1,
-                item.getMenu().getNamaMenu(),
-                item.getJumlah(),
-                item.getCatatan(),
-                subtotal
+            modelKeranjang.addRow(new Object[] {
+                    i + 1,
+                    item.getMenu().getNamaMenu(),
+                    item.getJumlah(),
+                    item.getCatatan(),
+                    subtotal
             });
         }
         labelTotalKeranjang.setText("Total: " + total + " kupon / Rp" + (total * 5000));
+        aturLebarKolom(tabelKeranjang);
     }
 
     private void isiTabelPesananPelanggan() {
@@ -545,34 +590,37 @@ public class MainGUI extends JFrame {
         for (Pesanan pesanan : pesananUntukMejaSaatIni()) {
             modelPesananPelanggan.addRow(barisPesanan(pesanan));
         }
+        aturLebarKolom(tabelPesananPelanggan);
     }
 
     private void isiTabelAmbil() {
         modelAmbil.setRowCount(0);
         for (Pesanan pesanan : pesananUntukMejaSaatIni()) {
             if ("Siap Diambil".equals(pesanan.getStatusPesanan())) {
-                modelAmbil.addRow(new Object[]{
-                    pesanan.getIdPesanan(),
-                    pesanan.getNoMeja(),
-                    pesanan.getStatusPesanan(),
-                    "Rp" + pesanan.hitungTotalRupiah()
+                modelAmbil.addRow(new Object[] {
+                        pesanan.getIdPesanan(),
+                        pesanan.getNoMeja(),
+                        pesanan.getStatusPesanan(),
+                        "Rp" + pesanan.hitungTotalRupiah()
                 });
             }
         }
+        aturLebarKolom(tabelAmbil);
     }
 
     private void isiTabelRatingPelanggan() {
         modelRatingPelanggan.setRowCount(0);
         for (Pesanan pesanan : pesananUntukMejaSaatIni()) {
             if ("Selesai".equals(pesanan.getStatusPesanan())) {
-                modelRatingPelanggan.addRow(new Object[]{
-                    pesanan.getIdPesanan(),
-                    pesanan.getNoMeja(),
-                    pesanan.getStatusPesanan(),
-                    pesanan.getRating() == null ? "Belum" : "Sudah"
+                modelRatingPelanggan.addRow(new Object[] {
+                        pesanan.getIdPesanan(),
+                        pesanan.getNoMeja(),
+                        pesanan.getStatusPesanan(),
+                        pesanan.getRating() == null ? "Belum" : "Sudah"
                 });
             }
         }
+        aturLebarKolom(tabelRatingPelanggan);
     }
 
     private void isiSemuaTabelTenant() {
@@ -594,6 +642,7 @@ public class MainGUI extends JFrame {
                 modelPesananTenant.addRow(barisPesanan(pesanan));
             }
         }
+        aturLebarKolom(tabelPesananTenant);
     }
 
     private void isiTabelRiwayatTenant() {
@@ -603,6 +652,7 @@ public class MainGUI extends JFrame {
                 modelRiwayatTenant.addRow(barisPesanan(pesanan));
             }
         }
+        aturLebarKolom(tabelRiwayatTenant);
     }
 
     private void isiTabelRatingTenant() {
@@ -610,26 +660,28 @@ public class MainGUI extends JFrame {
         for (Pesanan pesanan : tenantLogin.getDaftarPesanan()) {
             Rating rating = pesanan.getRating();
             if (rating != null) {
-                modelRatingTenant.addRow(new Object[]{
-                    pesanan.getIdPesanan(),
-                    pesanan.getNoMeja(),
-                    rating.getNilai(),
-                    rating.getUlasan()
+                modelRatingTenant.addRow(new Object[] {
+                        pesanan.getIdPesanan(),
+                        pesanan.getNoMeja(),
+                        rating.getNilai(),
+                        rating.getUlasan()
                 });
             }
         }
+        aturLebarKolom(tabelRatingTenant);
     }
 
     private void isiTabelMenuTenant() {
         modelMenuTenant.setRowCount(0);
         for (Menu menu : tenantLogin.getDaftarMenu()) {
-            modelMenuTenant.addRow(new Object[]{
-                menu.getIdProduk(),
-                menu.getNamaMenu(),
-                menu.getJenis(),
-                menu.getHargaKupon()
+            modelMenuTenant.addRow(new Object[] {
+                    menu.getIdProduk(),
+                    menu.getNamaMenu(),
+                    menu.getJenis(),
+                    menu.getHargaKupon()
             });
         }
+        aturLebarKolom(tabelMenuTenant);
     }
 
     private void isiTabelStokTenant() {
@@ -638,15 +690,16 @@ public class MainGUI extends JFrame {
         for (int i = 0; i < daftarStok.size(); i++) {
             StokMenu stok = daftarStok.get(i);
             Menu menu = stok.getProduk();
-            modelStokTenant.addRow(new Object[]{
-                i + 1,
-                menu.getIdProduk(),
-                menu.getNamaMenu(),
-                menu.getJenis(),
-                menu.getHargaKupon(),
-                stok.getJumlahStok()
+            modelStokTenant.addRow(new Object[] {
+                    i + 1,
+                    menu.getIdProduk(),
+                    menu.getNamaMenu(),
+                    menu.getJenis(),
+                    menu.getHargaKupon(),
+                    stok.getJumlahStok()
             });
         }
+        aturLebarKolom(tabelStokTenant);
     }
 
     private void tambahKeKeranjang(JSpinner inputJumlah, JTextField inputCatatan) {
@@ -659,8 +712,28 @@ public class MainGUI extends JFrame {
         ArrayList<StokMenu> daftarStok = tenantDipilih.getDaftarStokMenu();
         StokMenu stok = daftarStok.get(row);
         int jumlah = (int) inputJumlah.getValue();
-        if (stok.getJumlahStok() < jumlah) {
-            tampilError("Stok tidak cukup.");
+
+        int sudahDiKeranjang = 0;
+        for (ItemPesanan item : keranjang) {
+            if (item.getMenu().getIdProduk().equals(stok.getProduk().getIdProduk())) {
+                sudahDiKeranjang += item.getJumlah();
+            }
+        }
+
+        if (stok.getJumlahStok() < (sudahDiKeranjang + jumlah)) {
+            tampilError("Stok tidak cukup. Jumlah di keranjang: " + sudahDiKeranjang + ", Stok tersedia: "
+                    + stok.getJumlahStok());
+            return;
+        }
+
+        if (jumlah <= 0) {
+            if (stok.getJumlahStok() == 0) {
+                tampilError("Stok menu ini kosong.");
+            } else if (stok.getJumlahStok() <= sudahDiKeranjang) {
+                tampilError("Stok tidak cukup. Semua stok tersedia (" + stok.getJumlahStok() + ") sudah dimasukkan ke keranjang.");
+            } else {
+                tampilError("Jumlah harus lebih dari 0.");
+            }
             return;
         }
 
@@ -671,6 +744,7 @@ public class MainGUI extends JFrame {
         keranjang.add(new ItemPesanan(stok.getProduk(), jumlah, catatan));
         inputCatatan.setText("");
         isiTabelKeranjang();
+        updateSpinnerMax(tabelMenu, inputJumlah);
     }
 
     private void hapusDariKeranjang() {
@@ -681,6 +755,7 @@ public class MainGUI extends JFrame {
         }
         keranjang.remove(row);
         isiTabelKeranjang();
+        updateSpinnerMax(tabelMenu, inputJumlah);
     }
 
     private void checkout() {
@@ -707,7 +782,8 @@ public class MainGUI extends JFrame {
         keranjang.clear();
         isiSemuaTabelPelanggan();
         tampilInfo("Checkout berhasil. ID pesanan: " + idPesanan
-            + "\nKode QRIS: " + pembayaran.getKodeQRIS());
+                + "\nKode QRIS: " + pembayaran.getKodeQRIS());
+        updateSpinnerMax(tabelMenu, inputJumlah);
     }
 
     private void ambilPesanan() {
@@ -778,8 +854,8 @@ public class MainGUI extends JFrame {
     }
 
     private void tambahMenuTenant(JComboBox<String> inputJenis, JTextField inputId,
-                                  JTextField inputNama, JSpinner inputHarga,
-                                  JSpinner inputStok) {
+            JTextField inputNama, JSpinner inputHarga,
+            JSpinner inputStok) {
         String id = inputId.getText().trim();
         String nama = inputNama.getText().trim();
         if (id.isEmpty() || nama.isEmpty()) {
@@ -791,8 +867,8 @@ public class MainGUI extends JFrame {
         int harga = (int) inputHarga.getValue();
         int stok = (int) inputStok.getValue();
         Menu menu = "Makanan".equals(jenis)
-            ? new Makanan(id, nama, harga)
-            : new Minuman(id, nama, harga);
+                ? new Makanan(id, nama, harga)
+                : new Minuman(id, nama, harga);
 
         boolean sukses = manajemenMenu.tambahMenuKeDB(tenantLogin.getIdPengguna(), menu, stok);
         if (!sukses) {
@@ -840,12 +916,12 @@ public class MainGUI extends JFrame {
     }
 
     private Object[] barisPesanan(Pesanan pesanan) {
-        return new Object[]{
-            pesanan.getIdPesanan(),
-            pesanan.getNoMeja(),
-            pesanan.getStatusPesanan(),
-            pesanan.hitungTotalKupon(),
-            "Rp" + pesanan.hitungTotalRupiah()
+        return new Object[] {
+                pesanan.getIdPesanan(),
+                pesanan.getNoMeja(),
+                pesanan.getStatusPesanan(),
+                pesanan.hitungTotalKupon(),
+                "Rp" + pesanan.hitungTotalRupiah()
         };
     }
 
@@ -885,6 +961,9 @@ public class MainGUI extends JFrame {
             table.setRowHeight(28);
             table.getTableHeader().setFont(FONT_TABLE_HEADER);
             table.setFillsViewportHeight(true);
+            table.getTableHeader().setReorderingAllowed(false);
+            table.getTableHeader().setResizingAllowed(false);
+            table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         } else if (component instanceof JTextField textField) {
             textField.setFont(FONT_NORMAL);
         } else if (component instanceof JPasswordField passwordField) {
@@ -901,6 +980,84 @@ public class MainGUI extends JFrame {
             for (Component child : container.getComponents()) {
                 aturTampilanKomponen(child);
             }
+        }
+    }
+
+    private void updateSpinnerMax(JTable table, JSpinner spinner) {
+        if (table == null || spinner == null || tenantDipilih == null)
+            return;
+        int row = table.getSelectedRow();
+        if (row >= 0) {
+            ArrayList<StokMenu> daftarStok = tenantDipilih.getDaftarStokMenu();
+            if (row < daftarStok.size()) {
+                StokMenu stok = daftarStok.get(row);
+                int stockAvailable = stok.getJumlahStok();
+                int sudahDiKeranjang = 0;
+                for (ItemPesanan item : keranjang) {
+                    if (item.getMenu().getIdProduk().equals(stok.getProduk().getIdProduk())) {
+                        sudahDiKeranjang += item.getJumlah();
+                    }
+                }
+                int sisaStok = Math.max(0, stockAvailable - sudahDiKeranjang);
+                SpinnerNumberModel model = (SpinnerNumberModel) spinner.getModel();
+                if (sisaStok > 0) {
+                    model.setMinimum(1);
+                    model.setMaximum(sisaStok);
+                    int currentVal = (int) spinner.getValue();
+                    if (currentVal > sisaStok) {
+                        spinner.setValue(sisaStok);
+                    } else if (currentVal < 1) {
+                        spinner.setValue(1);
+                    }
+                } else {
+                    model.setMinimum(0);
+                    model.setMaximum(0);
+                    spinner.setValue(0);
+                }
+            }
+        } else {
+            SpinnerNumberModel model = (SpinnerNumberModel) spinner.getModel();
+            model.setMinimum(1);
+            model.setMaximum(99);
+            spinner.setValue(1);
+        }
+    }
+
+    private void aturLebarKolom(JTable table) {
+        if (table == null)
+            return;
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        int totalWidth = 0;
+        int[] preferredWidths = new int[table.getColumnCount()];
+
+        for (int column = 0; column < table.getColumnCount(); column++) {
+            int width = 60; // Min width
+            Object headerValue = table.getColumnModel().getColumn(column).getHeaderValue();
+            if (headerValue != null) {
+                java.awt.FontMetrics fm = table.getTableHeader().getFontMetrics(table.getTableHeader().getFont());
+                width = Math.max(width, fm.stringWidth(headerValue.toString()) + 20);
+            }
+            for (int row = 0; row < table.getRowCount(); row++) {
+                Object value = table.getValueAt(row, column);
+                if (value != null) {
+                    java.awt.FontMetrics fm = table.getFontMetrics(table.getFont());
+                    width = Math.max(width, fm.stringWidth(value.toString()) + 20);
+                }
+            }
+            preferredWidths[column] = width;
+            totalWidth += width;
+        }
+
+        java.awt.Container parent = table.getParent();
+        if (parent instanceof JViewport viewport) {
+            int viewportWidth = viewport.getWidth();
+            if (totalWidth < viewportWidth) {
+                table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+            }
+        }
+
+        for (int column = 0; column < table.getColumnCount(); column++) {
+            table.getColumnModel().getColumn(column).setPreferredWidth(preferredWidths[column]);
         }
     }
 
